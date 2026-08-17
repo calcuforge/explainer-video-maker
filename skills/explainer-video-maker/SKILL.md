@@ -168,7 +168,7 @@ projects/
 │   ├── bgm.mp3                    # Background music (Step 11, shared by all videos)
 │   ├── video1/
 │   │   ├── result.mp4             # Final rendered video
-│   │   ├── video_config.yaml      # Topic definition
+│   │   ├── video_config.yaml      # Topic (Step 2) + content summaries (Step 5)
 │   │   ├── video_struct.yaml      # Video structure (stories → sections (one narration) → scenes (1-N, percentage))
 │   │   ├── video_tasks.yaml       # AIGC task list
 │   │   ├── remotion_sections.yaml # Remotion render config
@@ -242,7 +242,7 @@ confirms (e.g., "ok", "continue", "next", "确认", "继续").
 | 2 | Define topic | — (agent research) | `video_config.yaml` |
 | 3 | Topic research | `scripts/search_provider/search.py`, `scripts/search_provider/search_rss.py` | `search_results/*.md` |
 | 4 | Design chapter list | `scripts/verify/verify_stories.py` | `video_struct.yaml` (stories only) |
-| 5 | Write chapter scripts | `scripts/verify/verify_story_scripts.py` | `stories/{story_id}/script.md` |
+| 5 | Write chapter scripts | `scripts/verify/verify_story_scripts.py` | `stories/{story_id}/script.md`, `video_config.yaml` (summary + chapter_summaries) |
 | 6 | Design scene list | `scripts/tool/generate_scene_list.py`, `scripts/verify/verify_video_struct.py` | `video_struct.yaml` (full structure) |
 | 7 | TTS + frame calculation | `scripts/tool/run_tts.py`, `scripts/verify/verify_audio.py` | `speech.wav` per scene |
 | 8 | Search stock media | `scripts/search_provider/search_stock_media.py`, `scripts/verify/verify_stock_assets.py` | `scenes/origin_*` stock assets |

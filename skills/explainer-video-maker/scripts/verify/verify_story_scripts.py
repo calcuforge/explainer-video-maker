@@ -8,6 +8,11 @@ The COMBINED character count (trimmed) across ALL chapter scripts must reach
 content.min_story_chars × <number of chapters> (default 500 per chapter).
 There is no per-chapter minimum.
 
+Also validates the content summaries in video_config.yaml (written in Step 5
+after all scripts):
+    summary:            overall video synopsis, non-empty
+    chapter_summaries:  one non-empty synopsis per story_id, keyed by story id
+
 Usage:
     python verify_story_scripts.py --video-struct /abs/path/video_struct.yaml \
                                    --project-config /abs/path/project_config.yaml
@@ -28,7 +33,9 @@ sys.path.insert(0, str(SKILL_ROOT))
 from lib.yamlutil import load_yaml
 
 SCRIPT_FILENAME = "script.md"
+VIDEO_CONFIG_FILENAME = "video_config.yaml"
 DEFAULT_MIN_CHARS = 500
+MIN_SUMMARY_CHARS = 10
 
 
 def validate(struct: dict, min_chars: int, video_dir: Path) -> tuple[list[str], list[str]]:
@@ -65,6 +72,44 @@ def validate(struct: dict, min_chars: int, video_dir: Path) -> tuple[list[str], 
             f"below the {expected} minimum "
             f"(content.min_story_chars={min_chars} × {len(stories)} chapters)"
         )
+
+    # Content summaries in video_config.yaml (overall + per chapter).
+    config_path = video_dir / VIDEO_CONFIG_FILENAME
+    if not config_path.exists():
+        errors.append(f"video_config.yaml not found (required for summaries): {config_path}")
+        return errors, warnings
+
+    config = load_yaml(config_path)
+    summary = config.get("summary", "")
+    if not str(summary).strip():
+        errors.append("video_config.yaml: 'summary' (视频内容梗概) is missing or empty")
+    elif len(str(summary).strip()) < MIN_SUMMARY_CHARS:
+        errors.append(
+            f"video_config.yaml: 'summary' is too short ({len(str(summary).strip())} chars), "
+            f"must be a substantive synopsis (≥ {MIN_SUMMARY_CHARS} chars)"
+        )
+
+    chapter_summaries = config.get("chapter_summaries")
+    if not isinstance(chapter_summaries, dict) or not chapter_summaries:
+        errors.append("video_config.yaml: 'chapter_summaries' (分章节内容梗概) is missing or empty")
+    else:
+        for story in stories:
+            story_id = story.get("id", "")
+            if story_id not in chapter_summaries:
+                errors.append(
+                    f"video_config.yaml: 'chapter_summaries' is missing story '{story_id}'"
+                )
+                continue
+            text = str(chapter_summaries[story_id]).strip()
+            if not text:
+                errors.append(
+                    f"video_config.yaml: 'chapter_summaries.{story_id}' is empty"
+                )
+            elif len(text) < MIN_SUMMARY_CHARS:
+                errors.append(
+                    f"video_config.yaml: 'chapter_summaries.{story_id}' is too short "
+                    f"({len(text)} chars), must be a substantive synopsis (≥ {MIN_SUMMARY_CHARS} chars)"
+                )
 
     return errors, warnings
 

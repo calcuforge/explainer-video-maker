@@ -42,7 +42,7 @@ projects/
 │   ├── voice_file.wav             # Step 1 — TTS reference voice
 │   ├── bgm.mp3                    # Step 11 — background music (shared by all videos)
 │   ├── {video_name}/
-│   │   ├── video_config.yaml      # Step 2 — topic definition
+│   │   ├── video_config.yaml      # Step 2 — topic definition; Step 5 adds content summaries
 │   │   ├── search_results/        # Step 3 — research artifacts
 │   │   │   ├── result1.md
 │   │   │   └── result2.md
@@ -229,7 +229,8 @@ projects/
 3. **Specific topic** (user names a topic):
    - Use the user's topic directly
 
-4. Create `video_config.yaml`:
+4. Create `video_config.yaml` (the content summaries — `summary`,
+   `chapter_summaries` — are added in Step 5 after the scripts are written):
    ```yaml
    topic: <chosen topic title>
    ```

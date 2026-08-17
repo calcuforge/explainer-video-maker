@@ -495,7 +495,7 @@ Per-step artifact summary:
 | 2 | `video_config.yaml` (show the chosen topic) |
 | 3 | `search_results/result{N}.md` (list all, count of results) |
 | 4 | `video_struct.yaml` (story count — chapter list) |
-| 5 | `stories/{story_id}/script.md` (count; total meets `min_story_chars` × chapters) |
+| 5 | `stories/{story_id}/script.md` (count; total meets `min_story_chars` × chapters); `video_config.yaml` (summary + chapter_summaries) |
 | 6 | `video_struct.yaml` (section + scene counts; each section = one narration) |
 | 7 | `speech.wav` files (count, total duration) |
 | 8 | `scenes/origin_*` stock downloads (count, provider, resolution) |
@@ -521,7 +521,7 @@ where to resume:
 | `video_config.yaml` only | Step 3 |
 | + `search_results/` | Step 4 (design chapters) |
 | + `video_struct.yaml` (chapters only, no scripts) | Step 5 (write scripts) |
-| + `stories/*/script.md` (scripts, no scenes yet) | Step 6 (design scenes) |
+| + `stories/*/script.md` + `video_config.yaml` summaries (scripts, no scenes yet) | Step 6 (design scenes) |
 | + `video_struct.yaml` (full scenes, no audio) | Step 7 (TTS) |
 | + audio files + frames set | Step 8 (search stock media) |
 | + `scenes/` with stock assets (or no stock scenes) | Step 9 (plan AIGC) |

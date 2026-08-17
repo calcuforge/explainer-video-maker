@@ -51,14 +51,28 @@
 
 5. **Reference:** [demo_projects/project1/video1/stories/story1/script.md](demo_projects/project1/video1/stories/story1/script.md)
 
-6. **Validate:**
+6. **After ALL chapter scripts are written — write the content summaries into
+   `video_config.yaml`** (this completes Step 5):
+   ```yaml
+   topic: <chosen topic title>
+   summary: <整部视频的内容梗概 — 1-3 句话，概括全片主题与叙事主线>
+   chapter_summaries:
+     <story_id>: <该章节的内容梗概 — 1-2 句话，概括本章内容与作用>
+   ```
+   - Write the summaries in your own words, derived from the actual script
+     content — not from the topic alone. Each chapter gets exactly one entry,
+     keyed by its `story_id` from `video_struct.yaml`; every story MUST appear.
+   - Keep each summary substantive (a real synopsis, not a placeholder like
+     "本章介绍该主题").
+
+7. **Validate:**
    ```bash
    python3 "${SKILL_DIR}/scripts/verify/verify_story_scripts.py" \
      --video-struct /abs/path/video_struct.yaml \
      --project-config /abs/path/project_config.yaml
    ```
-   If it fails (script missing or below the minimum), fix and re-validate. Do NOT
-   proceed until exit 0.
+   If it fails (script missing, below the minimum, or missing summaries), fix
+   and re-validate. Do NOT proceed until exit 0.
 
 ---
 
