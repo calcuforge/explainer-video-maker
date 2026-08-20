@@ -53,25 +53,31 @@ conflicts with a cheaper default (e.g. "use a text card"), the rule wins.
 
 Every scene falls into one of two buckets:
 
-- **Visual scenes** — AIGC or stock image/video (`AssetImage`, `AssetVideo`,
-  `KenBurnsImage`; `is_aigc_scene: true`). They show, set mood, and carry
-  cinematic weight.
+- **Visual scenes** — scenes that actually SHOW an image/video asset
+  (`AssetImage`, `AssetVideo`, `KenBurnsImage`, `MediaSection`), AIGC or stock.
+  They show, set mood, and carry cinematic weight.
 - **Data/text scenes** — structured components (`QuoteBlock`, `FeatureGrid`,
   `IconCard`, `ComparisonCard`, `StatCounter`, `DataBar`, `Timeline`,
-  `FlowChart`, `CodeBlock`, `DataTable`, `DiagramReveal`, `AnimationDemo`;
-  `is_aigc_scene: false`). They explain, quantify, and organize information.
+  `FlowChart`, `CodeBlock`, `DataTable`, `DiagramReveal`, `AnimationDemo`,
+  `StatHighlight`, `MetricsRow`, `ProgressRing`, `StepProgress`, `SplitLayout`,
+  `ZigzagCards`, `KeywordCloud`, `MapPins`, `AudioWaveform`). They explain,
+  quantify, and organize information.
 
-Only the `documentary` style sets a content-balance target (footage-led
-storytelling); for other styles the mix is left to the intent mapping and the
-style rules below. Use the table as a planning target for the whole video (not
-a hard per-chapter quota):
+Narrative styles are **footage-led**: visuals must be the majority of ALL
+scenes, data/text scenes are accents. The minimum is **hard-enforced** by
+`verify_video_struct.py` (Step 6 gate) for the narrative styles below; use the
+band as the planning target for the whole video:
 
-| Style | Visual scenes | Data/text scenes | Character |
-|-------|--------------:|-----------------:|-----------|
-| documentary | **75–85%** | 15–25% | Show, don't tell — footage-led, data as seasoning |
+| Style | Visual scenes (min, enforced) | Target band | Character |
+|-------|-----------------------------:|-------------|-----------|
+| documentary | **≥ 75%** | 75–85% | Show, don't tell — footage-led, data as seasoning |
+| knowledge_sharing | **≥ 60%** | 60–80% | Concepts shown over footage; diagrams only for truly structural content |
+| news_broadcast | **≥ 60%** | 60–85% | Footage-led reporting; stats as accents |
 
-A lopsided video (e.g. a documentary that is 80% text cards) feels off-genre.
-Aim for the target band.
+A lopsided video (e.g. a documentary that is 80% text cards) feels off-genre
+and FAILS the Step 6 gate. Default every narration to a visual scene
+(see expression_intent_mapping.md "Visual-First Principle"); convert to a
+data/text scene only when the narration's point IS the text/data.
 
 ---
 
@@ -82,27 +88,31 @@ Aim for the target band.
    `AssetImage` scenes.
 2. **Close on a wide shot + quote.** The final scene should be a cinematic
    visual (video or KenBurnsImage) or a `QuoteBlock` summarizing the theme.
-3. **Content balance: 75–85% visual, 15–25% data/text.** Footage (video +
-   KenBurnsImage) is the body of a documentary; use data/text components only as
-   occasional accents (a milestone Timeline, a key StatCounter, a closing
+3. **Content balance: ≥ 75% visual (enforced by `verify_video_struct.py`).**
+   Footage (video + KenBurnsImage) is the body of a documentary; use data/text
+   components only as occasional accents (a key StatCounter, a closing
    QuoteBlock). Avoid consecutive data/text scenes.
 
 ## knowledge_sharing (知识分享)
 
 1. **Open by stating what the viewer will learn.** The first scene should set
-   up the concept (a visual or an IconCard/QuoteBlock framing the topic), not
-   jump straight into dense data.
-2. **Prefer explanatory components.** Concept scenes should favor
-   `DiagramReveal`, `FlowChart`, `FeatureGrid`, and `AnimationDemo` over plain
-   text.
+   up the concept with a visual (an image/video of the subject), not jump
+   straight into dense data.
+2. **Visual-first: ≥ 60% visual scenes (enforced).** Show the concept over
+   footage (`AssetVideo`, `KenBurnsImage`, `AssetImage`, `MediaSection`) by
+   default — narrate the explanation over the visual. Keep `DiagramReveal`,
+   `FlowChart`, `FeatureGrid`, and `AnimationDemo` ONLY for content that is
+   inherently structural (an architecture, a pipeline, a mechanism the viewer
+   must study).
 
 ## news_broadcast (新闻播报)
 
 1. **Open with a headline feel.** The first scene should establish the event —
    a `video`/image of the subject, or a bold `QuoteBlock`/title framing the
    story.
-2. **Lead with facts and numbers.** Use `StatCounter`, `DataBar`, `Timeline`,
-   and `DataTable` to present the news concretely; keep claims tied to data.
+2. **Footage-led: ≥ 60% visual scenes (enforced).** Recreate the event and its
+   context with video/images; use `StatCounter`, `DataBar`, and `DataTable`
+   sparingly as accents for the key numbers, and keep claims tied to data.
 
 ## product_intro (产品介绍)
 

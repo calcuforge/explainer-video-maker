@@ -19,9 +19,15 @@ Key validations:
 - remotion_component must be a valid component name
 - the chapter script (stories/{story_id}/script.md) must equal all of that
   story's narration contents merged together (compared ignoring whitespace)
+- narrative styles must be visual-majority: when --project-config is given and
+  project.video_style is documentary (≥75%), knowledge_sharing or
+  news_broadcast (≥60%), the share of VISUAL scenes (AssetImage, AssetVideo,
+  KenBurnsImage, MediaSection) must be at least the style's minimum — data/text
+  scenes are accents, not the body
 
 Usage:
-    python verify_video_struct.py --video-struct /abs/path/video_struct.yaml
+    python verify_video_struct.py --video-struct /abs/path/video_struct.yaml \
+                                  [--project-config /abs/path/project_config.yaml]
 
 Exit codes: 0 = valid, 1 = errors found, 2 = warnings only.
 """
@@ -48,6 +54,17 @@ VALID_COMPONENTS = [
     "SplitLayout", "ZigzagCards", "KeywordCloud", "MapPins", "AudioWaveform",
 ]
 
+# A scene is VISUAL when it actually shows an image/video asset (AIGC or stock).
+VISUAL_COMPONENTS = ["AssetImage", "AssetVideo", "KenBurnsImage", "MediaSection"]
+
+# Narrative styles are footage-led: visuals carry the story, data/text scenes
+# are accents. Enforced as a hard minimum (see special-rules.md "Content type balance").
+MIN_VISUAL_RATIO = {
+    "documentary": 0.75,
+    "knowledge_sharing": 0.60,
+    "news_broadcast": 0.60,
+}
+
 VALID_SCENE_TYPES = ["image", "video", "none"]
 VALID_WORKFLOW_TYPES = [
     "text_to_image", "text_to_video", "image_to_video",
@@ -64,11 +81,18 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", "", text or "")
 
 
-def validate(struct: dict, video_dir: str | None = None) -> tuple[list[str], list[str]]:
+def validate(
+    struct: dict,
+    video_dir: str | None = None,
+    video_style: str | None = None,
+) -> tuple[list[str], list[str]]:
     """Return (errors, warnings).
 
     If video_dir is given, also cross-checks that each story's chapter script
     (stories/{story_id}/script.md) equals its narration contents merged together.
+
+    If video_style is a narrative style (documentary/knowledge_sharing/
+    news_broadcast), also enforces the minimum visual-scene ratio.
     """
     errors = []
     warnings = []
@@ -77,6 +101,9 @@ def validate(struct: dict, video_dir: str | None = None) -> tuple[list[str], lis
     if not stories:
         errors.append("[stories] list is empty or missing")
         return errors, warnings
+
+    total_scenes = 0
+    visual_scenes = 0
 
     # Track global IDs
     story_ids = set()
@@ -144,6 +171,11 @@ def validate(struct: dict, video_dir: str | None = None) -> tuple[list[str], lis
                     errors.append(f"{scn_prefix}: 'remotion_component' is required")
                 elif component not in VALID_COMPONENTS:
                     errors.append(f"{scn_prefix}: invalid remotion_component '{component}'. Valid: {VALID_COMPONENTS}")
+
+                # Visual-majority counting (narrative styles are footage-led)
+                total_scenes += 1
+                if component in VISUAL_COMPONENTS:
+                    visual_scenes += 1
 
                 # AIGC vs non-AIGC validation
                 is_aigc = scene.get("is_aigc_scene", False)
@@ -260,12 +292,27 @@ def validate(struct: dict, video_dir: str | None = None) -> tuple[list[str], lis
                     f"({script_path}). Concatenating all narrations must reproduce script.md exactly."
                 )
 
+    # Visual-majority check for narrative styles: images/videos carry the story,
+    # data/text scenes are accents. See special-rules.md "Content type balance".
+    if video_style and video_style in MIN_VISUAL_RATIO and total_scenes:
+        ratio = visual_scenes / total_scenes
+        minimum = MIN_VISUAL_RATIO[video_style]
+        if ratio < minimum:
+            errors.append(
+                f"visual scene ratio is {ratio:.0%} ({visual_scenes}/{total_scenes}), "
+                f"below the {minimum:.0%} minimum for '{video_style}' style. "
+                f"Visual scenes = AssetImage/AssetVideo/KenBurnsImage/MediaSection. "
+                f"Convert data/text scenes into visual scenes (see "
+                f"expression_intent_mapping.md 'Visual-first principle')."
+            )
+
     return errors, warnings
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate video_struct.yaml")
     parser.add_argument("--video-struct", required=True, help="Path to video_struct.yaml (absolute)")
+    parser.add_argument("--project-config", help="Path to project_config.yaml (absolute) — enables the visual-ratio check")
     args = parser.parse_args()
 
     from lib.net import require_abs
@@ -273,7 +320,14 @@ def main() -> None:
 
     struct = load_yaml(args.video_struct)
     video_dir = str(Path(args.video_struct).parent)
-    errors, warnings = validate(struct, video_dir)
+
+    video_style = None
+    if args.project_config:
+        require_abs(args.project_config)
+        project_config = load_yaml(args.project_config)
+        video_style = str(project_config.get("project", {}).get("video_style", "") or "")
+
+    errors, warnings = validate(struct, video_dir, video_style)
 
     if errors:
         print(json.dumps({

@@ -116,6 +116,16 @@
 3. **Fill the visuals, data and text — one story at a time.** Working one chapter
    at a time, complete that story's scenes before moving to the next (do NOT fill
    every story in one bulk pass). For each scene:
+   - **Visual-first for narrative styles.** In `documentary`,
+     `knowledge_sharing` and `news_broadcast` videos, default EVERY narration to
+     a visual scene (image/video/MediaSection); a data/text component is the
+     exception, used only when the narration's point IS the text/data (a spoken
+     quote, a key metric, a structure the viewer must study). Before picking a
+     data/text component, ask "能换成画面吗?" — see the **Visual-First
+     Principle** in [expression_intent_mapping.md](expression_intent_mapping.md)
+     and the **hard minimums** in [special-rules.md](special-rules.md)
+     (documentary ≥ 75%, knowledge_sharing / news_broadcast ≥ 60% visual
+     scenes, enforced by `verify_video_struct.py`).
    - Decide the expression method using
      [expression_intent_mapping.md](expression_intent_mapping.md):
      - **AIGC scenes** (`is_aigc_scene: true`, `asset_generation_method: aigc`): need AI-generated imagery/video
@@ -169,9 +179,14 @@
 
 6. **Validate:**
    ```bash
-   python3 "${SKILL_DIR}/scripts/verify/verify_video_struct.py" --video-struct /abs/path/video_struct.yaml
+   python3 "${SKILL_DIR}/scripts/verify/verify_video_struct.py" \
+     --video-struct /abs/path/video_struct.yaml \
+     --project-config /abs/path/project_config.yaml
    ```
-   If it fails, fix and re-validate. Do NOT proceed until exit 0.
+   With `--project-config`, the script also enforces the narrative-style
+   visual-scene minimums (documentary ≥ 75%, knowledge_sharing /
+   news_broadcast ≥ 60%). If it fails, fix and re-validate. Do NOT proceed
+   until exit 0.
 
 ---
 

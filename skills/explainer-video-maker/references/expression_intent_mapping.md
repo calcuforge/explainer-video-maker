@@ -1,5 +1,52 @@
 # AI Narration Video Production: Expression Intent Mapping
 
+## Visual-First Principle (narrative styles)
+
+**In `documentary`, `knowledge_sharing` and `news_broadcast` videos, the DEFAULT
+expression method for every narration is a VISUAL scene** — an AIGC/stock image
+(`AssetImage` / `KenBurnsImage`) or video (`AssetVideo`), or a `MediaSection`
+image grid. The intent tables below are per-intent component picks, but their
+text/data rows are FALLBACKS — use them only when the narration's point is
+inherently textual/data and no image or footage can carry it.
+
+**Balance target (enforced, Step 6 gate):** visual scenes must be the majority
+of ALL scenes — `documentary` ≥ 75%, `knowledge_sharing` / `news_broadcast`
+≥ 60% (verified by `verify_video_struct.py`; see special-rules.md).
+
+**Decision checklist for each scene — before picking a data/text component, ask
+"能换成画面吗？":**
+
+1. **Does the narration describe something you could SEE?** An event, a person,
+   a place, an era, a product, a change, an atmosphere, a scene → SHOW it:
+   `AssetVideo` (dynamic), `KenBurnsImage` (cinematic still), `AssetImage`,
+   or stock media for generic visuals. When the narration has 2+ ideas, give
+   each idea its own visual scene (split by `percentage`).
+2. **Is the narration essentially "X 达到 N" / "N 个…" (the metric IS the
+   point)?** → `StatCounter` / `StatHighlight` / `DataBar` (or keep the metric
+   INSIDE a visual scene's caption/text when it is secondary).
+3. **Is it a spoken quote or judgment?** → `QuoteBlock` — the one text component
+   that is a legitimate documentary accent. Use sparingly (1-2 per video).
+4. **Is it a process, structure, or comparison the viewer must study?**
+   (knowledge/tutorial styles) → `FlowChart` / `DiagramReveal` / `FeatureGrid` /
+   `ComparisonCard`. For documentary/news, still prefer footage: narrate the
+   process OVER a visual scene instead of drawing a diagram.
+5. **Only a timeline of facts with no visual hook?** → convert to a `MediaSection`
+   of 2-4 era/example images (with `caption`s) or a sequence of visual scenes —
+   NOT a bare `Timeline`/`IconCard`/`DataTable` for narrative styles.
+
+**Common overused text intents → visual alternatives:**
+
+| Text intent (avoid for narrative styles) | Visual alternative |
+|---|---|
+| Show historical stages / evolution (`Timeline`) | 3-4 era images in `MediaSection`, or one visual scene per stage |
+| Summarize achievements / key points (`IconCard`, `FeatureGrid`) | `MediaSection` images with captions; achievements narrated over footage |
+| Highlight a metric (`StatCounter`, `StatHighlight`) | Visual scene of the subject; keep the number in `narration.content` or as a `MediaSection` stat row |
+| Show rankings / specifications (`DataTable`) | `MediaSection` images of the ranked items |
+| Emphasize key terms (`KeywordCloud`) | Visual scene representing the term |
+| Show categories (`FeatureGrid`) | `MediaSection` with one image per category |
+
+---
+
 ## Choosing AssetImage vs KenBurnsImage vs AssetVideo
 
 When a scene uses a text-to-image workflow (or any static image), choose the Remotion component based on the Expression Intent:

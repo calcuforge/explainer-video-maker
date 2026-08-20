@@ -3,7 +3,7 @@ project:
   project_root_path: /path/to/projects/my-project # project root path
   creation_mode: auto # auto — pipeline runs end-to-end. manual — each AI product waits for user confirmation.
   language: zh-CN  # Narration language: zh-CN | en-US.
-  video_style: xxx
+  video_style: documentary # xxx | documentary | knowledge_sharing | news_broadcast | product_intro | data_report | tutorial
   target_audience: xxx
 video:
   orientation: horizontal # horizontal (16:9) | vertical (9:16).

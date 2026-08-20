@@ -95,29 +95,31 @@ stories:
       total_frame: 0
       audio_path: ''
     scene_list:
-    - intent: 阶段推进展示
+    - intent: 时代困境渲染
       id: scene4a
-      percentage: 40
-      data: '{"title":"早期历程","activeStep":2,"steps":[{"label":"1956","description":"达特茅斯会议，学科诞生"},{"label":"1960s","description":"乐观探索，目标宏大"},{"label":"1970s","description":"进展放缓，遭遇瓶颈"}]}'
+      percentage: 60
+      data: ''
       text: ''
-      visual_content: ''
-      is_aigc_scene: false
-      asset_generation_method: none
-      type: none
-      remotion_component: StepProgress
+      visual_content: 1970年代研究机构的机房，老旧大型机与成排磁带机缓慢运转，研究员神情疲惫，灰暗压抑色调
+      is_aigc_scene: true
+      asset_generation_method: aigc
+      type: video
+      remotion_component: AssetVideo
       origin_asset_path: ''
       asset_path: ''
-      workflows: []
-    - intent: 发展历程梳理
+      workflows:
+      - workflow_type: text_to_image
+      - workflow_type: image_to_video
+    - intent: 历史细节特写
       id: scene4b
-      percentage: 60
-      data: '{"heading":"早期历程","items":[{"label":"1956","description":"达特茅斯会议，学科诞生"},{"label":"1960s","description":"乐观探索，目标宏大"},{"label":"1970s","description":"进展放缓，遭遇瓶颈"}]}'
+      percentage: 40
+      data: ''
       text: ''
-      visual_content: ''
-      is_aigc_scene: false
-      asset_generation_method: none
-      type: none
-      remotion_component: Timeline
+      visual_content: 早期计算机的穿孔卡片与磁带卷宗特写，复古科技档案质感
+      is_aigc_scene: true
+      asset_generation_method: stock
+      type: image
+      remotion_component: KenBurnsImage
       origin_asset_path: ''
       asset_path: ''
       workflows: []
@@ -148,61 +150,65 @@ stories:
       total_frame: 0
       audio_path: ''
     scene_list:
-    - intent: 要点交错展示
+    - intent: 时代场景还原
       id: scene6a
       percentage: 50
-      data: '{"title":"专家系统三大优势","items":[{"icon":"zap","title":"规则推理","description":"用规则库模拟专家决策"},{"icon":"rocket","title":"商业落地","description":"企业采购热情回升"},{"icon":"shield","title":"可靠性","description":"结果可解释可追溯"}]}'
+      data: ''
       text: ''
-      visual_content: ''
-      is_aigc_scene: false
-      asset_generation_method: none
-      type: none
-      remotion_component: ZigzagCards
+      visual_content: 1980年代企业办公室，职员在绿屏终端前使用专家系统软件，复古办公场景
+      is_aigc_scene: true
+      asset_generation_method: stock
+      type: image
+      remotion_component: KenBurnsImage
       origin_asset_path: ''
       asset_path: ''
       workflows: []
-    - intent: 关键转折展示
+    - intent: 复苏氛围渲染
       id: scene6b
       percentage: 50
-      data: '{"heading":"复苏契机","icon":"zap","title":"专家系统商用","description":"80年代专家系统走向商业应用，重新点燃工业界的兴趣与投入。"}'
+      data: ''
       text: ''
-      visual_content: ''
-      is_aigc_scene: false
-      asset_generation_method: none
-      type: none
-      remotion_component: IconCard
+      visual_content: 1980年代企业数据中心机房，机柜指示灯闪烁，工程师在终端前调试，暖黄色灯光
+      is_aigc_scene: true
+      asset_generation_method: aigc
+      type: video
+      remotion_component: AssetVideo
       origin_asset_path: ''
       asset_path: ''
-      workflows: []
+      workflows:
+      - workflow_type: text_to_image
+      - workflow_type: image_to_video
   - narration:
       id: narration7
       content: 1997年，IBM的深蓝计算机击败了国际象棋世界冠军卡斯帕罗夫，让全世界为之震惊。
       total_frame: 0
       audio_path: ''
     scene_list:
-    - intent: 里程碑大数字
+    - intent: 历史时刻再现
       id: scene7a
       percentage: 50
-      data: '{"value":"1997","unit":"年","label":"深蓝击败卡斯帕罗夫","description":"计算机首次战胜人类国际象棋世界冠军","icon":"trophy"}'
+      data: ''
       text: ''
-      visual_content: ''
-      is_aigc_scene: false
-      asset_generation_method: none
-      type: none
-      remotion_component: StatHighlight
+      visual_content: 1997年国际象棋人机大战现场，IBM深蓝主机陈列在侧，观众围观大屏幕直播，90年代电视影像风格
+      is_aigc_scene: true
+      asset_generation_method: aigc
+      type: video
+      remotion_component: AssetVideo
       origin_asset_path: ''
       asset_path: ''
-      workflows: []
-    - intent: 里程碑数据
+      workflows:
+      - workflow_type: text_to_image
+      - workflow_type: image_to_video
+    - intent: 对决细节特写
       id: scene7b
       percentage: 50
-      data: '{"heading":"里程碑","items":[{"value":1997,"suffix":"年","label":"深蓝击败卡斯帕罗夫","icon":"trophy"}]}'
+      data: ''
       text: ''
-      visual_content: ''
-      is_aigc_scene: false
-      asset_generation_method: none
-      type: none
-      remotion_component: StatCounter
+      visual_content: 国际象棋棋盘特写，一侧是深蓝计算机的显示器，明暗对比强烈
+      is_aigc_scene: true
+      asset_generation_method: stock
+      type: image
+      remotion_component: KenBurnsImage
       origin_asset_path: ''
       asset_path: ''
       workflows: []
@@ -270,16 +276,16 @@ stories:
         origin_asset_path: ''
         asset_path: ''
         workflows: []
-    - intent: 应用场景展示
+    - intent: 应用场景渲染
       id: scene9
       percentage: 40
-      data: '{"heading":"日常应用","columns":3,"items":[{"icon":"search","title":"搜索引擎","description":"更精准的检索"},{"icon":"languages","title":"机器翻译","description":"跨语言沟通"},{"icon":"thumbs-up","title":"个性推荐","description":"懂你所好"}]}'
+      data: ''
       text: ''
-      visual_content: ''
-      is_aigc_scene: false
-      asset_generation_method: none
-      type: none
-      remotion_component: FeatureGrid
+      visual_content: 地铁与街头的现代人使用智能手机和笔记本电脑，界面光影交织，都市科技感
+      is_aigc_scene: true
+      asset_generation_method: stock
+      type: image
+      remotion_component: KenBurnsImage
       origin_asset_path: ''
       asset_path: ''
       workflows: []
@@ -310,29 +316,31 @@ stories:
       total_frame: 0
       audio_path: ''
     scene_list:
-    - intent: 多指标仪表盘
+    - intent: 社区氛围渲染
       id: scene11a
       percentage: 50
-      data: '{"title":"开源力量","items":[{"value":80,"label":"开源模型","icon":"box"},{"value":65,"label":"社区贡献者","icon":"users"},{"value":90,"label":"衍生应用","icon":"app-window"}]}'
+      data: ''
       text: ''
-      visual_content: ''
-      is_aigc_scene: false
-      asset_generation_method: none
-      type: none
-      remotion_component: MetricsRow
+      visual_content: 全球开发者线上协作场景，多块屏幕同时显示代码提交与社区讨论，活跃的科技氛围
+      is_aigc_scene: true
+      asset_generation_method: aigc
+      type: video
+      remotion_component: AssetVideo
       origin_asset_path: ''
       asset_path: ''
-      workflows: []
-    - intent: 数据趋势展示
+      workflows:
+      - workflow_type: text_to_image
+      - workflow_type: image_to_video
+    - intent: 开源现场还原
       id: scene11b
       percentage: 50
-      data: '{"heading":"开源力量","items":[{"label":"开源模型","value":80},{"label":"社区贡献者","value":65},{"label":"衍生应用","value":90}]}'
+      data: ''
       text: ''
-      visual_content: ''
-      is_aigc_scene: false
-      asset_generation_method: none
-      type: none
-      remotion_component: DataBar
+      visual_content: 开源技术大会现场，开发者们聚精会神，大屏展示开源项目贡献图谱
+      is_aigc_scene: true
+      asset_generation_method: stock
+      type: image
+      remotion_component: KenBurnsImage
       origin_asset_path: ''
       asset_path: ''
       workflows: []
@@ -355,16 +363,16 @@ stories:
       origin_asset_path: ''
       asset_path: ''
       workflows: []
-    - intent: 要点归纳
+    - intent: 战略场景渲染
       id: scene12b
       percentage: 50
-      data: '{"heading":"国家战略","icon":"globe","title":"上升为竞争力关键","description":"各国纷纷出台战略，把人工智能视为决定未来国家竞争力的关键力量。"}'
+      data: ''
       text: ''
-      visual_content: ''
-      is_aigc_scene: false
-      asset_generation_method: none
-      type: none
-      remotion_component: IconCard
+      visual_content: 现代化国际会议厅，各国代表围绕人工智能战略议题讨论，庄重氛围
+      is_aigc_scene: true
+      asset_generation_method: stock
+      type: image
+      remotion_component: KenBurnsImage
       origin_asset_path: ''
       asset_path: ''
       workflows: []
