@@ -102,6 +102,12 @@ theme:
   transition_duration: 12 # frames @ fps
   # show_progress_bar: 是否展示底部章节进度条。true（默认）= 展示；false = 隐藏。
   show_progress_bar: true
+ad_video:
+  # Step 14 在章节边界插入广告短片。视频来源：{project_root}/ad_video 目录 + ad_video.directories。
+  enabled: true # 是否开启广告插入。true（默认）= 开启；false = 关闭。
+  insert_position: middle # beginning（开头）| middle（中间，默认，agent 决策具体章节边界）| end（结尾）
+  directories: [] # 自定义广告目录（相对 project 根目录或绝对路径），支持多个。默认空 = 只扫描项目下 ad_video 目录。
+  # insert_after_story: story3 # insert_position=middle 时由 agent 在 Step 14 填写具体章节边界（插在该章之后）。
 content:
   duration: medium # 仅控制章节数：short=2-3 章 / medium=5-7 章 / long=8-12 章
   min_story_chars: 300 # 每章基准字数：全部章节讲稿（stories/{story_id}/script.md）总字数须 ≥ min_story_chars×章节数（无单章下限），verify_story_scripts.py 校验

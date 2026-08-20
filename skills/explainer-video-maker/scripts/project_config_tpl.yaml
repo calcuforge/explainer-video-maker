@@ -116,6 +116,17 @@ theme:
   # show_progress_bar: whether to render the bottom chapter progress bar.
   #   true (default) = show; false = hide.
   show_progress_bar: true
+ad_video:
+  # Insert ad short videos at a chapter boundary of the finished video (Step 14).
+  # Videos are detected under {project_root}/ad_video plus any ad_video.directories.
+  enabled: true # whether ad insertion is on. true (default) = on; false = off.
+  insert_position: middle # beginning | middle (default) | end. middle = the agent
+    # decides the exact chapter boundary and writes it to insert_after_story below.
+  directories: [] # extra ad directories (relative to project root or absolute),
+    # multiple allowed. Default empty = scan only {project_root}/ad_video.
+  # insert_after_story: story3 # agent decision for insert_position=middle:
+    # the ad(s) are inserted right AFTER this chapter. Filled by the agent at Step 14.
+content:
 content:
   # duration: controls the number of chapters (stories) only —
   #   short = 2-3 chapters, medium = 5-7 chapters, long = 8-12 chapters.

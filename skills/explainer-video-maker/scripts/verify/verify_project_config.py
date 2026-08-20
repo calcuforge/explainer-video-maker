@@ -140,6 +140,26 @@ def validate(config: dict) -> list[str]:
     if show_bar is not None and not isinstance(show_bar, bool):
         errors.append(f"[theme.show_progress_bar] must be a boolean, got '{show_bar}'")
 
+    # --- ad_video section (Step 14) ---
+    ad = config.get("ad_video", {})
+    if not isinstance(ad, dict):
+        errors.append("[ad_video] must be a mapping")
+    else:
+        ad_enabled = ad.get("enabled", True)
+        if not isinstance(ad_enabled, bool):
+            errors.append(f"[ad_video.enabled] must be a boolean, got '{ad_enabled}'")
+        ad_position = ad.get("insert_position", "middle")
+        if ad_position not in ("beginning", "middle", "end"):
+            errors.append(f"[ad_video.insert_position] must be beginning | middle | end, got '{ad_position}'")
+        ad_dirs = ad.get("directories", [])
+        if ad_dirs is None:
+            ad_dirs = []
+        if not isinstance(ad_dirs, list) or not all(isinstance(d, str) and d.strip() for d in ad_dirs):
+            errors.append("[ad_video.directories] must be a list of non-empty directory strings")
+        ad_after = ad.get("insert_after_story")
+        if ad_after is not None and not isinstance(ad_after, str):
+            errors.append(f"[ad_video.insert_after_story] must be a story id string, got '{ad_after}'")
+
     # --- content section ---
     content = config.get("content", {})
     duration = content.get("duration", "")

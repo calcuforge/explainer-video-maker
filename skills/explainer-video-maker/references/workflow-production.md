@@ -1,4 +1,4 @@
-# Workflow Steps — Production Phase (Steps 8–13)
+# Workflow Steps — Production Phase (Steps 8–14)
 
 > **When to load:** Step 8 through Step 13 — stock media search, AIGC prompt design,
 > task execution, upscale, background music, Remotion config generation, and final
@@ -468,6 +468,54 @@ bgm:
 
 ---
 
+## Step 14: Insert Ad Videos
+
+**When:** After Step 13 produces `result.mp4`. Controlled by the `ad_video`
+section of project_config.yaml:
+
+```yaml
+ad_video:
+  enabled: true            # true (default) = on; false = off
+  insert_position: middle  # beginning | middle (default) | end
+  directories: []          # extra ad dirs (relative to project root or absolute)
+  insert_after_story: ""   # agent decision for middle: story id (e.g. story3)
+```
+
+**What to do:**
+
+1. **Check whether the step applies:**
+   - `ad_video.enabled: false` → skip (report "skipped — ads disabled").
+   - No ad videos found under `{project_root}/ad_video` nor any
+     `ad_video.directories` → skip (report the scanned dirs). Ad video
+     extensions: mp4/mov/mkv/webm/avi/m4v/flv. **All found videos are inserted**,
+     in filename order, at the same insertion point.
+2. **Decide the insertion point:**
+   - `beginning` / `end` → unambiguous, nothing to fill.
+   - `middle` (default) → the AGENT picks the chapter boundary: fill
+     `ad_video.insert_after_story` in project_config.yaml with a story id from
+     remotion_sections.yaml (the ad goes right AFTER that chapter) — e.g. for a
+     7-chapter video, `story4` puts the ad in the middle. The script errors with
+     the valid story ids if it is missing.
+3. **Run the script** (foreground is fine — it is minutes, not hours):
+   ```bash
+   python3 "${SKILL_DIR}/scripts/tool/insert_ad_videos.py" \
+     --project-config /abs/path/project_config.yaml \
+     --remotion-sections /abs/path/remotion_sections.yaml \
+     --video /abs/path/result.mp4
+   ```
+   - The script splits `result.mp4` at the chapter boundary (ffmpeg, frame-accurate),
+     normalizes each ad to the main video's resolution/fps, and merges
+     part1 + ads + part2 (concat demuxer) into `{video_dir}/final.mp4` (faststart).
+     Temp files live in `{video_dir}/tmp/` and are removed automatically
+     (`--keep-parts` keeps them for debugging).
+   - Exit 0 with `inserted: false` = skipped (disabled / no ads). Exit 1 = error
+     (e.g. missing `insert_after_story`) — fix and re-run. Do NOT proceed until
+     exit 0.
+4. **Deliver the right file:** present `final.mp4` when ads were inserted,
+   otherwise `result.mp4`. Same faststart + progressive playback rules as Step 13.
+
+---
+
 ## Step Completion Reporting (Manual Mode)
 
 In manual mode, after each step finishes, report artifacts and wait for user
@@ -504,6 +552,7 @@ Per-step artifact summary:
 | 11 | `bgm.mp3` (project root; path written to `bgm.audio`) |
 | 12 | `remotion_sections.yaml` (section count) |
 | 13 | `result.mp4` (file size, duration) |
+| 14 | `final.mp4` (inserted ad count, insertion point) — or report "skipped" when ads disabled/none found |
 
 ---
 
@@ -529,3 +578,5 @@ where to resume:
 | + `scenes/` with all assets | Step 11 (generate bgm) |
 | + `bgm.mp3` at project root (or `bgm.enabled: false`) | Step 12 (generate remotion) |
 | + `remotion_sections.yaml` | Step 13 (render) |
+| + `result.mp4` | Step 14 (insert ads — when `ad_video.enabled` and ads exist; else done) |
+| + `final.mp4` (or Step 14 skipped) | Done |

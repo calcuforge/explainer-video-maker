@@ -81,6 +81,10 @@ def main() -> None:
     project_dir, final_name = resolve_project_dir(projects_dir, args.project_dir_name)
     project_dir.mkdir(parents=True, exist_ok=False)
 
+    # Pre-create the ad_video directory (kept empty) — Step 14 scans it for ad
+    # short videos; the user drops ad files here before rendering.
+    (project_dir / "ad_video").mkdir(exist_ok=False)
+
     # The only fields the script sets: the created directory's absolute path,
     # and the two component-dependency paths (defaulted to the workspace's dep/
     # dir — see below). All other fields (incl. project.name) are left as-is.

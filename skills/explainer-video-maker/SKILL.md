@@ -45,7 +45,7 @@ section's 1-N scenes by each scene's `percentage`.
 - [Prerequisites](#prerequisites)
 - [Project Management](#project-management)
 - [Execution Modes](#execution-modes) — Auto (default) vs Manual
-- [Workflow (13 Steps)](#workflow)
+- [Workflow (14 Steps)](#workflow)
 - [Hard Rules](#hard-rules)
 - [References](#references)
 
@@ -166,8 +166,10 @@ projects/
 │   ├── project_config.yaml        # Project global preferences
 │   ├── voice_file.wav             # TTS reference voice (shared by all videos)
 │   ├── bgm.mp3                    # Background music (Step 11, shared by all videos)
+│   ├── ad_video/                  # Ad short videos for Step 14 (pre-created, empty; drop ad files here)
 │   ├── video1/
-│   │   ├── result.mp4             # Final rendered video
+│   │   ├── result.mp4             # Final rendered video (Step 13)
+│   │   ├── final.mp4              # With ad videos inserted (Step 14, when ad_video.enabled and ads found)
 │   │   ├── video_config.yaml      # Topic (Step 2) + content summaries (Step 5)
 │   │   ├── video_struct.yaml      # Video structure (stories → sections (one narration) → scenes (1-N, percentage))
 │   │   ├── video_tasks.yaml       # AIGC task list
@@ -234,7 +236,7 @@ confirms (e.g., "ok", "continue", "next", "确认", "继续").
 > Detailed step-by-step instructions:
 > - Steps 1–4 (Setup): [references/workflow-setup.md](references/workflow-setup.md)
 > - Steps 5–7 (Content): [references/workflow-content.md](references/workflow-content.md)
-> - Steps 8–13 (Production): [references/workflow-production.md](references/workflow-production.md)
+> - Steps 8–14 (Production): [references/workflow-production.md](references/workflow-production.md)
 
 | # | Step | Key Script | Output |
 |---|------|-----------|--------|
@@ -251,6 +253,7 @@ confirms (e.g., "ok", "continue", "next", "确认", "继续").
 | 11 | Generate background music | `scripts/tool/run_bgm.py` | `projects/{name}/bgm.mp3` |
 | 12 | Generate remotion config | `scripts/tool/generate_remotion_sections.py`, `scripts/verify/verify_remotion_sections.py`, `scripts/verify/verify_remotion_data.py` | `remotion_sections.yaml` |
 | 13 | Render video | `scripts/tool/render.py` | `result.mp4` |
+| 14 | Insert ad videos | `scripts/tool/insert_ad_videos.py` | `final.mp4` (when `ad_video.enabled` and ads found) |
 
 **Mandatory validation gates:**
 
@@ -265,6 +268,7 @@ confirms (e.g., "ok", "continue", "next", "确认", "继续").
 - After Step 10: `verify_aigc_assets.py` must exit 0
 - After Step 11: `run_bgm.py` must exit 0 (skipped when `bgm.enabled: false`; fill `bgm.prompt` in `project_config.yaml` first — it is empty at init)
 - After Step 12: `verify_remotion_sections.py` must exit 0, then `verify_remotion_data.py` must exit 0
+- After Step 14: `insert_ad_videos.py` must exit 0 (skipped when `ad_video.enabled: false` or no ad videos found; for `insert_position: middle` fill `ad_video.insert_after_story` first)
 
 ---
 
@@ -293,6 +297,7 @@ confirms (e.g., "ok", "continue", "next", "确认", "继续").
 | **Faststart progressive playback** | When presenting the finished video as a player in the chat, the mp4 MUST be faststart (moov atom at the front) and embedded for PROGRESSIVE playback — e.g. `<video controls preload="metadata" src="...">`. Do NOT load the whole file at once (`preload="auto"`). The render pipeline already emits faststart mp4s. |
 | **AIGC cross-scene consistency** | For subjects that appear across multiple AIGC scenes (recurring characters, specific objects, branded items, consistent environments), the `common.subject.description` and `common.style` fields in all their `video_prompt_{scene_id}.yaml` files MUST use the SAME appearance description (same wording, same visual attributes). This prevents ComfyUI from generating visually inconsistent outputs for the same subject across scenes. If a character/object appears in N scenes, write the description once, then reuse it verbatim in all N prompt files. |
 | **Stock media for generic visuals** | For scenes showing generic, non-specific visuals (atmosphere, mood, environment — NOT specific people/events/products), prefer `asset_generation_method: stock` over AIGC — but **only when the corresponding flag is enabled**: `stock_media.search_image` (default true) for image scenes, `stock_media.search_video` (default false) for video scenes. If a flag is false, use AIGC for that type. Also requires `stock_media.sources` to be non-empty. Configure sources in `project_config.yaml` (each entry: `provider` + `api_key`). See `expression_intent_mapping.md` for when stock is appropriate. |
+| **Ad insertion (Step 14)** | When `ad_video.enabled` (default true) and ad videos exist under `{project_root}/ad_video` or `ad_video.directories`, insert ALL found videos at the configured `ad_video.insert_position` (beginning \| middle \| end, default middle): the finished `result.mp4` is split at the chapter boundary and merged with the ads (ffmpeg) into `final.mp4`. For `middle`, the AGENT must pick the chapter boundary and fill `ad_video.insert_after_story` (a story id) before running the script. Deliver `final.mp4` when inserted, else `result.mp4`. |
 
 ---
 
@@ -304,7 +309,7 @@ Load on demand — do NOT load all at once:
 |------|-----------|
 | [references/workflow-setup.md](references/workflow-setup.md) | Steps 1–4 — project init, topic, research, chapters |
 | [references/workflow-content.md](references/workflow-content.md) | Steps 5–7 — scripts, scene design, TTS |
-| [references/workflow-production.md](references/workflow-production.md) | Steps 8–13 — stock media, AIGC, bgm, remotion config, render |
+| [references/workflow-production.md](references/workflow-production.md) | Steps 8–14 — stock media, AIGC, bgm, remotion config, render, ad insertion |
 | [references/natural-narration.md](references/natural-narration.md) | Step 5 — writing chapter narration scripts |
 | [references/search-providers.md](references/search-providers.md) | Step 3 — topic research |
 | [references/expression_intent_mapping.md](references/expression_intent_mapping.md) | Step 6 — choosing scene types and components |

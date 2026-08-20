@@ -41,6 +41,7 @@ projects/
 │   ├── project_config.yaml        # Step 1 — project global preferences
 │   ├── voice_file.wav             # Step 1 — TTS reference voice
 │   ├── bgm.mp3                    # Step 11 — background music (shared by all videos)
+│   ├── ad_video/                  # Step 1 — ad short videos for Step 14 (pre-created, empty)
 │   ├── {video_name}/
 │   │   ├── video_config.yaml      # Step 2 — topic definition; Step 5 adds content summaries
 │   │   ├── search_results/        # Step 3 — research artifacts
@@ -59,7 +60,8 @@ projects/
 │   │   ├── video_tasks.yaml       # Step 9b — AIGC task list
 │   │   ├── tmp/                   # General temporary files (cache, discovery results, etc.)
 │   │   ├── remotion_sections.yaml # Step 12 — render config
-│   │   └── result.mp4             # Step 13 — final video
+│   │   └── result.mp4             # Step 13 — rendered video
+│   │   └── final.mp4              # Step 14 — with ad videos inserted (when ads enabled + found)
 ```
 
 ---
