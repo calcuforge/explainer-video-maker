@@ -308,6 +308,7 @@ Load on demand — do NOT load all at once:
 | File | Load when |
 |------|-----------|
 | [references/workflow-setup.md](references/workflow-setup.md) | Steps 1–4 — project init, topic, research, chapters |
+| [references/topic-selection.md](references/topic-selection.md) | Step 2 — **only when auto topic selection is needed** (user only names a category: web-search candidates, de-dupe against existing project topics, then apply the full selection strategy) |
 | [references/workflow-content.md](references/workflow-content.md) | Steps 5–7 — scripts, scene design, TTS |
 | [references/workflow-production.md](references/workflow-production.md) | Steps 8–14 — stock media, AIGC, bgm, remotion config, render, ad insertion |
 | [references/natural-narration.md](references/natural-narration.md) | Step 5 — writing chapter narration scripts |

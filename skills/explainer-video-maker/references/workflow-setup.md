@@ -221,15 +221,28 @@ projects/
    `N` (`video1`, `video2`, ...). **Never reuse or overwrite an existing
    `video{N}/`** for a new request.
 
-2. **Auto topic selection** (user only names a category):
-   - The agent selects a specific topic that:
-     - Fits the project's `video_style` category
-     - Does not duplicate existing videos in this project
-     - Has rich, explorable content
-   - Example: user says "make an animal documentary" → agent picks "The Migration of Arctic Terns"
+2. **Auto topic selection** (user only names a category/direction, e.g.
+   "制作一个空难视频" / "make an animal documentary"). **Must follow
+   [references/topic-selection.md](topic-selection.md) end-to-end:**
+   1. **Read existing project topics** — `projects/{project_name}/video{N}/video_config.yaml`
+      `topic` fields of ALL existing videos; build the exclusion list
+      (exact duplicates AND semantic duplicates are forbidden).
+   2. **Web-search candidate topics** — do NOT pick from memory. Run `web_search`
+      for the category from multiple angles (famous events, key figures, unsolved
+      mysteries, controversies; Chinese + English queries) to collect 8-15
+      concrete candidate topics with source/fact-richness notes.
+   3. **Scan strategies, score, de-dupe** — apply the full selection strategy
+      (content objects → narrative drivers → user value → emotion → title
+      packaging), score each candidate with the TopicScore formula, drop
+      candidates that duplicate existing project topics, filter weak ones.
+   4. **Pick the primary topic** (plus backups) and write it into
+      `video_config.yaml`. Example: "make an animal documentary" → "The
+      Migration of Arctic Terns" (after web-search confirms rich material).
+   - In **manual mode**, present the primary topic + alternatives and wait for
+     user approval before writing the config.
 
 3. **Specific topic** (user names a topic):
-   - Use the user's topic directly
+   - Use the user's topic directly (skip auto selection).
 
 4. Create `video_config.yaml` (the content summaries — `summary`,
    `chapter_summaries` — are added in Step 5 after the scripts are written):
