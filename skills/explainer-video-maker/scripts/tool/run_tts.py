@@ -279,8 +279,8 @@ def collect_narration_units(video_struct: dict) -> list[dict]:
 # articulation features (esp. s/f/l fricatives) from the reference — a
 # consonant-poor sample gives it nothing to learn.
 _REFERENCE_CONTENT_ZH = (
-    "春风拂面，柳枝轻摆。十四岁的少年背着新书包，沿着山路数着石阶，"
-    "一步一步爬上山顶，山下的城市景色尽收眼底。"
+    "人生就像打游戏，要不断升级和挑战自己才能打败大boss，别怕困难，"
+    "因为每一次挑战都是成长的机会，一起加油吧"
 )
 _REFERENCE_CONTENT_EN = (
     "Fresh spring air flows over the forest hills. She sells sixty fresh "
