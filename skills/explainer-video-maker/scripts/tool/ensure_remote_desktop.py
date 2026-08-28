@@ -21,6 +21,10 @@ Usage:
     python ensure_remote_desktop.py status           # report service states
     python ensure_remote_desktop.py start [--url U]  # start missing services
     python ensure_remote_desktop.py stop             # close the whole stack
+    python ensure_remote_desktop.py notify "..." [--to platform] [--subject S]
+                                                     # push reminder via the hermes
+                                                     # messaging channel (hermes send);
+                                                     # exit 1 => fall back to chat
 
 stdout carries one JSON document ({{status, msg, data}}); progress notes go to
 stderr. Exit code 0 on success, 1 on error. Optional --url opens a new tab in
@@ -31,7 +35,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -183,9 +189,69 @@ def cmd_stop() -> int:
     return 0
 
 
+def _hermes_targets() -> dict:
+    """Configured messaging platforms from `hermes send --list --json`."""
+    hermes = shutil.which("hermes")
+    if not hermes:
+        return {}
+    try:
+        result = subprocess.run([hermes, "send", "--list", "--json"],
+                                capture_output=True, text=True, timeout=30)
+        if result.returncode != 0:
+            return {}
+        data = json.loads(result.stdout)
+        platforms = data.get("platforms", {}) if isinstance(data, dict) else {}
+        return platforms if isinstance(platforms, dict) else {}
+    except (subprocess.SubprocessError, json.JSONDecodeError):
+        return {}
+
+
+def cmd_notify(message: str, subject: str | None, to: str | None) -> int:
+    """Push a reminder via the hermes messaging channel.
+
+    Target: --to / HERMES_NOTIFY_TO, else the first platform configured in the
+    channel directory (`hermes send --list --json`). Exits 1 when the push is
+    unavailable or failed so the caller falls back to a conversation reminder.
+    """
+    hermes = shutil.which("hermes")
+    if not hermes:
+        emit("error", "hermes CLI not found — falling back to conversation reminder",
+             {"pushed": False})
+        return 1
+    target = to or os.environ.get("HERMES_NOTIFY_TO", "")
+    if not target:
+        platforms = _hermes_targets()
+        if platforms:
+            target = next(iter(platforms))
+    if not target:
+        emit("error", "no hermes messaging platform configured "
+                      "(hermes send --list is empty) — falling back to "
+                      "conversation reminder", {"pushed": False})
+        return 1
+    cmd = [hermes, "send", "--to", target, "--json"]
+    if subject:
+        cmd += ["--subject", subject]
+    cmd.append(message)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    except subprocess.SubprocessError as e:
+        emit("error", f"hermes send failed: {e} — falling back to conversation reminder",
+             {"pushed": False})
+        return 1
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()[:300]
+        emit("error", f"hermes push to {target} failed ({result.returncode}): {detail} "
+                      "— falling back to conversation reminder",
+             {"pushed": False})
+        return 1
+    emit("ok", f"reminder pushed via hermes channel ({target})",
+         {"pushed": True, "target": target})
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Ensure (status/start/stop) the hermes-desktop VNC + "
+        description="Ensure (status/start/stop/notify) the hermes-desktop VNC + "
                     "virtual display + Chromium stack (supervisord-managed) "
                     "for human-machine collaboration")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -194,6 +260,13 @@ def main() -> int:
     p_start.add_argument("--url", default=None,
                          help="open this URL in a new tab of the shared Chromium")
     sub.add_parser("stop", help="close the whole stack")
+    p_notify = sub.add_parser("notify", help="push a reminder via the hermes "
+                                             "messaging channel (fallback: chat)")
+    p_notify.add_argument("message", help="reminder text, e.g. the blocked URL")
+    p_notify.add_argument("--subject", default=None, help="header line (default: 需人工协作)")
+    p_notify.add_argument("--to", default=None,
+                          help="hermes target (platform or platform:chat_id); "
+                               "default: HERMES_NOTIFY_TO or first configured platform")
     args = parser.parse_args()
 
     if platform.system() == "Windows":
@@ -206,6 +279,8 @@ def main() -> int:
         return cmd_status()
     if args.command == "start":
         return cmd_start(args.url)
+    if args.command == "notify":
+        return cmd_notify(args.message, args.subject, args.to)
     return cmd_stop()
 
 
