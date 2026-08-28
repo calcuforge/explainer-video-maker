@@ -219,14 +219,17 @@ The agent **pauses for user confirmation** at key points:
 In manual mode, never proceed to the next step until the user explicitly
 confirms (e.g., "ok", "continue", "next", "确认", "继续").
 
-**人机协作的远程桌面栈（VNC/虚拟桌面/Chromium）:** 任何时候需要用户看到屏幕
-（预览、浏览器页面、界面演示等），先确保栈已就绪再开始协作，结束后关闭：
-`python scripts/tool/ensure_remote_desktop.py start [--url ...]`（幂等——自动检查
-VNC/Chromium/虚拟桌面，缺失才启动）→ 协作 → `... stop`。任何需要用户看屏的脚本
-同理：在使用前后自行 start/stop。机制：栈由 hermes-desktop 容器（镜像仓库
-hermes-hitl-environment）内的 supervisord 按需管理（pulseaudio/xvfb/openbox/
-chromium/x11vnc/novnc，等价于 `bash /scripts/launch-desktop.sh`），start/stop
-驱动 supervisorctl，`--url` 经 CDP :9222 在共享 Chromium 中开新标签页。
+**人机协作的远程桌面栈（VNC/虚拟桌面/Chromium）:** 人机协作**仅**发生在登录和
+验证码场景（访问被登录墙/验证码墙拦住时，如搜索/页面抓取被要求登录、安全验证、
+滑块验证）。其余环节全部由程序自动完成，无需也不应启动远程桌面栈。流程：
+脚本/agent 遇到登录墙或验证码墙 → 报告被拦的 URL → `python
+scripts/tool/ensure_remote_desktop.py start --url <被拦页面>`（幂等，启动缺失服务，
+经 CDP :9222 在共享 Chromium 打开该页）→ 告知用户经 VNC :5900 或 noVNC :6080
+完成登录/验证 → 确认完成后脚本/agent 继续 → 全部结束后 `... stop` 关闭。脚本同理：
+只有登录/验证码才需要协作，且在使用前后自行 start/stop。机制：栈由 hermes-desktop
+容器（镜像仓库 hermes-hitl-environment）内的 supervisord 按需管理
+（pulseaudio/xvfb/openbox/chromium/x11vnc/novnc，等价于 `bash
+/scripts/launch-desktop.sh`），start/stop 驱动 supervisorctl。
 
 ### Mode Detection
 
@@ -296,7 +299,7 @@ chromium/x11vnc/novnc，等价于 `bash /scripts/launch-desktop.sh`），start/s
 | **Visual-majority for narrative styles** | In `documentary`, `knowledge_sharing` and `news_broadcast` videos, visual scenes (`AssetImage`/`AssetVideo`/`KenBurnsImage`/`MediaSection`) MUST be the majority: documentary ≥ 75%, knowledge_sharing / news_broadcast ≥ 60% of ALL scenes. Data/text scenes are accents — default each narration to a visual, ask "能换成画面吗?" before using a text component. Enforced by `verify_video_struct.py` (Step 6). |
 | **Locale-aware search** | Detect network locale by REACHABILITY (Baidu reachable + Google blocked ⇒ China), not just system locale. In a domestic China network, NEVER use Google/Wikipedia (unreachable) — use Baidu/Bing/Baike only. `search.py` auto-drops google/wikipedia in China networks. |
 | **Playwright for web** | All website access uses Playwright Chromium (headless), except where `curl` is explicitly specified (RSS feeds). |
-| **人机协作远程桌面** | When human-machine collaboration needs the user to SEE the screen (Manual Mode reviews, previews, browser pages, UI demos), FIRST ensure the remote-desktop stack is up: `python scripts/tool/ensure_remote_desktop.py start` (idempotent — checks the supervisord-managed services pulseaudio/xvfb/openbox/chromium/x11vnc/novnc in the hermes-desktop container, starts only what's missing; `--url` opens a page in the shared Chromium via CDP). AFTER the collaboration ends, ALWAYS run `... stop` to close the stack — never leave it running between collaborations. Scripts that open a UI for the user must follow the same start-before / stop-after rule. |
+| **人机协作远程桌面（仅登录/验证码）** | Human-machine collaboration happens ONLY for login & CAPTCHA walls (search/page access blocked by a login form, security check, or slider captcha). Everything else is fully automated — never start the desktop stack for previews/demos. Flow: script/agent hits a login/CAPTCHA wall → report the blocked URL → `python scripts/tool/ensure_remote_desktop.py start --url <page>` (idempotent; checks supervisord services pulseaudio/xvfb/openbox/chromium/x11vnc/novnc in the hermes-desktop container, starts only missing ones, opens the page in the shared Chromium via CDP) → tell the user to complete login/CAPTCHA via VNC :5900 or noVNC :6080 → after confirmation, continue → ALWAYS `... stop` when done. Scripts follow the same rule: collaboration for login/CAPTCHA only, start-before / stop-after around it. |
 | **Anti-slop narration** | Narration text MUST follow [references/natural-narration.md](references/natural-narration.md). No AI-sounding filler, no rhetorical hooks, no rule-of-three abuse. |
 | **Narration length** | No hard character cap on narration `content`. Write substantive sentences and vary their length; split a narration into multiple scenes for visual reasons, not for length. |
 | **Verify before proceed** | Each step's verify script must pass before moving to the next step. |
