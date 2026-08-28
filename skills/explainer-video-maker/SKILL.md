@@ -219,6 +219,12 @@ The agent **pauses for user confirmation** at key points:
 In manual mode, never proceed to the next step until the user explicitly
 confirms (e.g., "ok", "continue", "next", "确认", "继续").
 
+**人机协作的远程桌面栈（VNC/虚拟桌面/Chromium）:** 任何时候需要用户看到屏幕
+（预览、浏览器页面、界面演示等），先确保栈已就绪再开始协作，结束后关闭：
+`python scripts/tool/ensure_remote_desktop.py start [--url ...]`（幂等——自动检查
+VNC/Chromium/虚拟桌面，缺失才启动）→ 协作 → `... stop`。任何需要用户看屏的脚本
+同理：在使用前后自行 start/stop。
+
 ### Mode Detection
 
 - **Step 1:** project_config.yaml does not yet exist. If the user explicitly
@@ -287,6 +293,7 @@ confirms (e.g., "ok", "continue", "next", "确认", "继续").
 | **Visual-majority for narrative styles** | In `documentary`, `knowledge_sharing` and `news_broadcast` videos, visual scenes (`AssetImage`/`AssetVideo`/`KenBurnsImage`/`MediaSection`) MUST be the majority: documentary ≥ 75%, knowledge_sharing / news_broadcast ≥ 60% of ALL scenes. Data/text scenes are accents — default each narration to a visual, ask "能换成画面吗?" before using a text component. Enforced by `verify_video_struct.py` (Step 6). |
 | **Locale-aware search** | Detect network locale by REACHABILITY (Baidu reachable + Google blocked ⇒ China), not just system locale. In a domestic China network, NEVER use Google/Wikipedia (unreachable) — use Baidu/Bing/Baike only. `search.py` auto-drops google/wikipedia in China networks. |
 | **Playwright for web** | All website access uses Playwright Chromium (headless), except where `curl` is explicitly specified (RSS feeds). |
+| **人机协作远程桌面** | When human-machine collaboration needs the user to SEE the screen (Manual Mode reviews, previews, browser pages, UI demos), FIRST ensure the remote-desktop stack is up: `python scripts/tool/ensure_remote_desktop.py start` (idempotent — checks VNC/Chromium/virtual display, starts only what's missing; `--url` opens a page). AFTER the collaboration ends, ALWAYS run `... stop` to close the stack — never leave it running between collaborations. Scripts that open a UI for the user must follow the same start-before / stop-after rule. |
 | **Anti-slop narration** | Narration text MUST follow [references/natural-narration.md](references/natural-narration.md). No AI-sounding filler, no rhetorical hooks, no rule-of-three abuse. |
 | **Narration length** | No hard character cap on narration `content`. Write substantive sentences and vary their length; split a narration into multiple scenes for visual reasons, not for length. |
 | **Verify before proceed** | Each step's verify script must pass before moving to the next step. |
