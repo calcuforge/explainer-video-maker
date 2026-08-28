@@ -40,7 +40,7 @@ tts:
   # Both `tts synth` and `tts run` auto-read this field — no --backend flag
   # needed in commands. Set once, all TTS calls route automatically.
   backend: comfyui_indextts
-  # speed: 旁白语速倍率。1.0 = 每秒 6 个汉字（中文）或约 2.5 个单词（英文）；
+  # speed: 旁白语速倍率。1.0 = 每秒 3 个汉字（中文）或约 2.5 个单词（英文）；
   #   合成后用 ffmpeg atempo 做变速后处理，使产物语速精确落在 speed×基准速率上。
   speed: 1.0
   volume: 1.0 # narration volume 0–1 (Remotion <Audio> volume multiplier)

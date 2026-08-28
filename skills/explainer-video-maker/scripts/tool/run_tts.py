@@ -8,7 +8,7 @@ then uses ffprobe to measure audio duration and calculates total_frame for each
 narration.
 
 Each synthesized narration is time-stretched to the target speech rate from
-tts.speed: 1.0 = 6 CJK chars/s (zh) or 2.5 words/s (en).
+tts.speed: 1.0 = 3 CJK chars/s (zh) or 2.5 words/s (en).
 
 Updates video_struct.yaml narration.audio_path and narration.total_frame fields.
 
@@ -88,10 +88,10 @@ def normalize_loudness(path: str, target_lufs: float = -14.0) -> bool:
 
 
 # Speech-rate standard: tts.speed multiplies the base narration rate —
-# speed=1.0 → 6 CJK characters/second (zh-CN) or ~2.5 words/second (en-US,
+# speed=1.0 → 3 CJK characters/second (zh-CN) or ~2.5 words/second (en-US,
 # ≈150 wpm). After synthesis each narration is time-stretched to land exactly
 # on the target rate (mirrors the atempo post-processing in qwen_tts.go).
-RATE_ZH = 6.0   # CJK characters per second at speed=1.0
+RATE_ZH = 3.0   # CJK characters per second at speed=1.0
 RATE_EN = 2.5   # English words per second at speed=1.0
 _CJK_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf]")
 _WORD_RE = re.compile(r"[A-Za-z]+(?:['-][A-Za-z]+)*")
@@ -569,7 +569,7 @@ def main() -> None:
                 raise RuntimeError(f"Unknown TTS backend: {backend}")
             # Enforce the speech-rate standard: time-stretch the synthesized
             # audio so the narration lands exactly on speed × base rate
-            # (speed=1.0 → 6 CJK chars/s for zh, 2.5 words/s for en).
+            # (speed=1.0 → 3 CJK chars/s for zh, 2.5 words/s for en).
             target_sec = target_duration_for_speed(content, effective_speed, language)
             if target_sec > 0:
                 factor = get_audio_duration(unit["output_path"]) / target_sec
