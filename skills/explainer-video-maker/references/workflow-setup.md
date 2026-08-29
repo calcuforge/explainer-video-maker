@@ -117,9 +117,11 @@ projects/
      project directory and `project_config.yaml` locations. `data.agent_supplement`
      lists the fields left empty for you to fill.
 
-2. **Edit the created `project_config.yaml` directly.** **Only fill the fields
-   the template leaves empty (or placeholder) — do NOT modify the pre-filled
-   default fields unless the user explicitly asks for a different value.**
+2. **Edit the created `project_config.yaml` directly.** **Never modify a field
+   that already has a value** (template default OR script-generated) **unless
+   the user explicitly asks for a different value.** Only fill fields that are
+   empty or placeholder — this applies to the entire project-config edit at
+   creation time, not just the fields listed below.
 
    **Fill these** (empty / placeholder in the template):
    - `project.name` — replace the `my-project` placeholder with the video
