@@ -7,8 +7,9 @@ section) using the configured TTS backend (comfyui_indextts or http_server),
 then uses ffprobe to measure audio duration and calculates total_frame for each
 narration.
 
-Each synthesized narration is time-stretched to the target speech rate from
-tts.speed: 1.0 = 3 CJK chars/s (zh) or 2.5 words/s (en).
+The speech-rate standard from tts.speed applies to the VOICE DESIGN step only:
+the generated reference voice is time-stretched to speed × base rate (1.0 = 3
+CJK chars/s zh / 2.5 words/s en) — narration synthesis itself is not adjusted.
 
 Updates video_struct.yaml narration.audio_path and narration.total_frame fields.
 
@@ -93,26 +94,46 @@ def normalize_loudness(path: str, target_lufs: float = -14.0) -> bool:
 # on the target rate (mirrors the atempo post-processing in qwen_tts.go).
 RATE_ZH = 3.0   # CJK characters per second at speed=1.0
 RATE_EN = 2.5   # English words per second at speed=1.0
+# Pause budget per major punctuation mark (TTS models pause at
+# ，。！？；、,.!?; — omitting this made punctuation-dense narrations
+# get over-compressed: speech sped up AND pauses shrunk → 忽快忽慢).
+PAUSE_SEC_ZH = 0.30
+PAUSE_SEC_EN = 0.25
+# atempo quality degrades beyond this range — clamp to it instead of
+# producing audible distortion on outlier narrations.
+SPEED_FACTOR_MIN = 0.75
+SPEED_FACTOR_MAX = 1.33
 _CJK_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf]")
 _WORD_RE = re.compile(r"[A-Za-z]+(?:['-][A-Za-z]+)*")
+_MAJOR_PUNCT_RE = re.compile(r"[，。！？；、,.!?;]")
 
 
 def count_speech_units(text: str, language: str) -> int:
-    """Spoken-unit count: CJK characters for zh, words for en. Punctuation and
-    other scripts (e.g. digits in an English narration) are not counted."""
+    """Spoken-unit count: CJK chars + Latin words + digit chars (each digit is
+    spoken, e.g. "2026" → 4 units, "5G" → 2). Punctuation is not counted.
+
+    Counting only CJK chars made mixed narrations (numbers, English words like
+    "boss"/"5G") under-count their speech, so the target duration was too short
+    and those narrations got stretched too fast — the 忽快忽慢 source.
+    """
     if language == "en-US":
-        return len(_WORD_RE.findall(text))
-    return len(_CJK_RE.findall(text))
+        units = len(_WORD_RE.findall(text))
+    else:
+        units = len(_CJK_RE.findall(text)) + len(_WORD_RE.findall(text))
+    return units + len(re.findall(r"\d", text))
 
 
 def target_duration_for_speed(text: str, speed: float, language: str) -> float:
     """Target narration duration (seconds) for the speech-rate standard: spoken
-    units divided by speed × base rate. Returns 0 if the text has no units."""
+    units divided by speed × base rate, plus a pause budget per major
+    punctuation mark. Returns 0 if the text has no units."""
     units = count_speech_units(text, language)
     if units == 0:
         return 0.0
     rate = RATE_EN if language == "en-US" else RATE_ZH
-    return units / (rate * speed)
+    pause_budget = len(_MAJOR_PUNCT_RE.findall(text)) * (
+        PAUSE_SEC_EN if language == "en-US" else PAUSE_SEC_ZH)
+    return units / (rate * speed) + pause_budget
 
 
 def build_atempo_chain(factor: float) -> list[str]:
@@ -347,12 +368,13 @@ def _postprocess_voice_ref(raw_path: str, output_path: str, eq_gain_db: float) -
 
 def _run_voice_design(voice_instruct: str, output_path: str, timeout: int = 3600,
                       language: str | None = None, eq_gain_db: float = 12.0,
-                      content_override: str = "") -> str:
+                      content_override: str = "", speed: float = 1.0) -> str:
     """Generate a reference voice via the qwen3_tts_voice_design workflow.
 
     The raw download is post-processed (_postprocess_voice_ref) into a clean
-    24 kHz mono WAV with a high-frequency clarity boost. Returns the output
-    audio file path.
+    24 kHz mono WAV with a high-frequency clarity boost, then time-stretched to
+    the speech-rate standard (tts.speed: the pace of the reference voice is
+    what the narration clone is built from). Returns the output audio file path.
     """
     lang = language or "zh-CN"
     # Qwen3VoiceDesign's `language` widget takes Chinese/English enum values,
@@ -407,6 +429,24 @@ def _run_voice_design(voice_instruct: str, output_path: str, timeout: int = 3600
         diag = _postprocess_voice_ref(raw_path, output_path, eq_gain_db)
     finally:
         Path(raw_path).unlink(missing_ok=True)
+
+    # Speech-rate standard: time-stretch the reference voice so its pace lands
+    # on speed × base rate (speed=1.0 → 3 CJK chars/s zh / 2.5 words/s en).
+    # The narration TTS clones FROM this reference, so its pace calibrates the
+    # whole pipeline — narration synthesis itself is NOT adjusted.
+    target_sec = target_duration_for_speed(content, speed, lang)
+    if target_sec > 0:
+        factor = get_audio_duration(output_path) / target_sec
+        if not SPEED_FACTOR_MIN <= factor <= SPEED_FACTOR_MAX:
+            print(f"    NOTE: voice-design speech-rate factor {factor:.2f} "
+                  f"clamped to [{SPEED_FACTOR_MIN}, {SPEED_FACTOR_MAX}]",
+                  file=sys.stderr)
+            factor = min(max(factor, SPEED_FACTOR_MIN), SPEED_FACTOR_MAX)
+        if not adjust_speech_rate(output_path, factor):
+            print(f"    WARNING: voice-design speed adjust failed for {output_path}",
+                  file=sys.stderr)
+        elif "duration" in diag:
+            diag["duration"] = round(get_audio_duration(output_path), 2)
 
     if "hf_delta_before" in diag:
         print(
@@ -492,6 +532,7 @@ def main() -> None:
         voice_file = _run_voice_design(
             voice_instruct, voice_output, timeout=tts_timeout, language=lang,
             eq_gain_db=voice_ref_eq_db, content_override=voice_ref_content,
+            speed=speed,
         )
 
         # Update project_config.yaml with the generated voice file
@@ -508,10 +549,6 @@ def main() -> None:
         http_headers["Host-User-ID"] = os.environ["Host-User-ID"]
     if not http_headers.get("Host-User-Token") and "Host-User-Token" in os.environ:
         http_headers["Host-User-Token"] = os.environ["Host-User-Token"]
-
-    # Speed that determines the target speech rate: http_server has its own
-    # server-side speed which takes precedence over tts.speed.
-    effective_speed = http_config.get("speed", speed) if backend == "http_server" else speed
 
     # Collect narration units
     units = collect_narration_units(video_struct)
@@ -571,14 +608,6 @@ def main() -> None:
                 )
             else:
                 raise RuntimeError(f"Unknown TTS backend: {backend}")
-            # Enforce the speech-rate standard: time-stretch the synthesized
-            # audio so the narration lands exactly on speed × base rate
-            # (speed=1.0 → 3 CJK chars/s for zh, 2.5 words/s for en).
-            target_sec = target_duration_for_speed(content, effective_speed, language)
-            if target_sec > 0:
-                factor = get_audio_duration(unit["output_path"]) / target_sec
-                if not adjust_speech_rate(unit["output_path"], factor):
-                    print(f"    WARNING: speed adjust failed for {unit['output_path']}", file=sys.stderr)
             return {"unit": unit, "error": None}
         except Exception as e:
             return {"unit": unit, "error": str(e)}
