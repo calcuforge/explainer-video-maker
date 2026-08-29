@@ -43,6 +43,7 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 # Dependency order — must match launch-desktop.sh.
 SERVICES = ["pulseaudio", "xvfb", "openbox", "chromium", "x11vnc", "novnc"]
@@ -190,7 +191,12 @@ def cmd_stop() -> int:
 
 
 def _hermes_targets() -> dict:
-    """Configured messaging platforms from `hermes send --list --json`."""
+    """Configured messaging platforms from `hermes send --list --json`.
+
+    NOTE: this reads the CACHED channel directory (~/.hermes/channel_directory.
+    json), which stays empty until the gateway has run and discovered channels
+    — platforms configured in ~/.hermes/config.yaml do NOT appear here.
+    """
     hermes = shutil.which("hermes")
     if not hermes:
         return {}
@@ -206,11 +212,67 @@ def _hermes_targets() -> dict:
         return {}
 
 
+def _has_credentials(pcfg: dict) -> bool:
+    """Mirror gateway.config._is_platform_connected (permissive subset)."""
+    if pcfg.get("token") or pcfg.get("api_key"):
+        return True
+    extra = pcfg.get("extra")
+    if isinstance(extra, dict):
+        # Weixin needs account_id + token.
+        if extra.get("account_id") and (extra.get("token") or pcfg.get("token")):
+            return True
+    return False
+
+
+def _has_home_channel(pcfg: dict, raw: dict, name: str) -> bool:
+    hc = pcfg.get("home_channel")
+    if isinstance(hc, dict) and (hc.get("chat_id") or hc.get("id")):
+        return True
+    # Top-level scalar homes are bridged into the env by `hermes send`
+    # (e.g. `hermes config set TELEGRAM_HOME_CHANNEL <id>`).
+    return f"{name.upper()}_HOME_CHANNEL" in {k: v for k, v in raw.items()
+                                              if isinstance(v, str)}
+
+
+def _config_platforms() -> tuple[list[str], list[str]]:
+    """Platforms configured in ~/.hermes/config.yaml (the surface
+    `hermes gateway setup` / `hermes config set` write).
+
+    Returns (with_home_channel, with_credentials_only) in config order — the
+    home-channel ones are preferred targets for a push.
+    """
+    home = Path(os.environ.get("HERMES_HOME") or Path.home() / ".hermes")
+    cfg = home / "config.yaml"
+    if not cfg.exists():
+        return [], []
+    try:
+        import yaml
+    except ImportError:
+        return [], []
+    try:
+        raw = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return [], []
+    platforms = raw.get("platforms") or {}
+    if not isinstance(platforms, dict):
+        return [], []
+    with_home, with_creds = [], []
+    for name, pcfg in platforms.items():
+        if not isinstance(pcfg, dict) or not _has_credentials(pcfg):
+            continue
+        if _has_home_channel(pcfg, raw, name):
+            with_home.append(name)
+        else:
+            with_creds.append(name)
+    return with_home, with_creds
+
+
 def cmd_notify(message: str, subject: str | None, to: str | None) -> int:
     """Push a reminder via the hermes messaging channel.
 
-    Target: --to / HERMES_NOTIFY_TO, else the first platform configured in the
-    channel directory (`hermes send --list --json`). Exits 1 when the push is
+    Target resolution order: --to / HERMES_NOTIFY_TO → channel directory
+    (`hermes send --list --json`) → ~/.hermes/config.yaml platforms (home
+    channel first, then credentials-only). Exits 1 when the push is
     unavailable or failed so the caller falls back to a conversation reminder.
     """
     hermes = shutil.which("hermes")
@@ -224,8 +286,14 @@ def cmd_notify(message: str, subject: str | None, to: str | None) -> int:
         if platforms:
             target = next(iter(platforms))
     if not target:
-        emit("error", "no hermes messaging platform configured "
-                      "(hermes send --list is empty) — falling back to "
+        with_home, with_creds = _config_platforms()
+        pick = with_home + with_creds
+        if pick:
+            target = pick[0]
+    if not target:
+        emit("error", "no hermes messaging platform configured (channel "
+                      "directory empty and ~/.hermes/config.yaml has no "
+                      "platform with credentials) — falling back to "
                       "conversation reminder", {"pushed": False})
         return 1
     cmd = [hermes, "send", "--to", target, "--json"]
@@ -240,8 +308,12 @@ def cmd_notify(message: str, subject: str | None, to: str | None) -> int:
         return 1
     if result.returncode != 0:
         detail = (result.stderr or result.stdout).strip()[:300]
-        emit("error", f"hermes push to {target} failed ({result.returncode}): {detail} "
-                      "— falling back to conversation reminder",
+        hint = ""
+        if "home channel" in detail.lower():
+            hint = (f" (set it with: hermes config set {target.upper()}_HOME_CHANNEL "
+                    "<chat_id>)")
+        emit("error", f"hermes push to {target} failed ({result.returncode}): {detail}"
+                      f"{hint} — falling back to conversation reminder",
              {"pushed": False})
         return 1
     emit("ok", f"reminder pushed via hermes channel ({target})",
