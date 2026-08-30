@@ -45,7 +45,7 @@ tts:
   # backend: comfyui_indextts — ComfyUI index_tts_2 workflow (default).
   #          http_server      — HTTP multipart TTS server (see tts.http below).
   backend: comfyui_indextts
-  # speed: speech-rate multiplier for the VOICE DESIGN reference audio. 1.0 = 3
+  # speed: speech-rate multiplier for the VOICE DESIGN reference audio. 1.0 = 6
   #   CJK chars/s (zh) or ~2.5 words/s (en, ≈150 wpm); the generated reference
   #   voice is time-stretched to match. Narration synthesis is NOT adjusted.
   speed: 1.0
