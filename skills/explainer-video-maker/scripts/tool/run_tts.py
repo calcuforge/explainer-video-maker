@@ -8,7 +8,7 @@ then uses ffprobe to measure audio duration and calculates total_frame for each
 narration.
 
 The speech-rate standard from tts.speed applies to the VOICE DESIGN step only:
-the generated reference voice is time-stretched to speed × base rate (1.0 = 6
+the generated reference voice is time-stretched to speed × base rate (1.0 = 5
 CJK chars/s zh / 2.5 words/s en) — narration synthesis itself is not adjusted.
 
 Updates video_struct.yaml narration.audio_path and narration.total_frame fields.
@@ -89,10 +89,10 @@ def normalize_loudness(path: str, target_lufs: float = -14.0) -> bool:
 
 
 # Speech-rate standard: tts.speed multiplies the base narration rate —
-# speed=1.0 → 6 CJK characters/second (zh-CN) or ~2.5 words/second (en-US,
+# speed=1.0 → 5 CJK characters/second (zh-CN) or ~2.5 words/second (en-US,
 # ≈150 wpm). The voice-design reference is time-stretched to land exactly on
 # the target rate (mirrors the atempo post-processing in qwen_tts.go).
-RATE_ZH = 6.0   # CJK characters per second at speed=1.0
+RATE_ZH = 5.0   # CJK characters per second at speed=1.0
 RATE_EN = 2.5   # English words per second at speed=1.0
 # Pause budget per major punctuation mark (TTS models pause at
 # ，。！？；、,.!?; — omitting this made punctuation-dense narrations
@@ -435,13 +435,13 @@ def _run_voice_design(voice_instruct: str, output_path: str, timeout: int = 3600
         Path(raw_path).unlink(missing_ok=True)
 
     # Speech-rate standard: time-stretch the reference voice so its pace lands
-    # on speed × base rate (speed=1.0 → 6 CJK chars/s zh / 2.5 words/s en).
+    # on speed × base rate (speed=1.0 → 5 CJK chars/s zh / 2.5 words/s en).
     # The narration TTS clones FROM this reference, so its pace calibrates the
     # whole pipeline — narration synthesis itself is NOT adjusted.
     target_sec = target_duration_for_speed(content, speed, lang)
     if target_sec > 0:
         # 强制达标：atempo 链可叠加任意倍率（每级 0.5-2.0，build_atempo_chain
-        # 自动分段），不做钳制——直接拉到 speed×基准速率（6 字/秒 @1.0）。
+        # 自动分段），不做钳制——直接拉到 speed×基准速率（5 字/秒 @1.0）。
         factor = get_audio_duration(output_path) / target_sec
         if not adjust_speech_rate(output_path, factor):
             print(f"    WARNING: voice-design speed adjust failed for {output_path}",

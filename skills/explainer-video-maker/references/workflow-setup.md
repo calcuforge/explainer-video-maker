@@ -139,7 +139,7 @@ projects/
    fill it with the target voice characteristics — INCLUDE a fast pace
    (e.g., `男，中年，中音调，语速快` / `male, middle-aged, moderate pitch, fast
    pace`): the reference voice is force-adjusted to the speech-rate standard
-   (6 字/秒 @ speed=1.0), and a natively fast reference keeps that adjustment
+   (5 字/秒 @ speed=1.0), and a natively fast reference keeps that adjustment
    small (less atempo distortion); see `comfyui-scheduler/doc/workflow.md` for
    valid voice attributes.
 
