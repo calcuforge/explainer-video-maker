@@ -325,19 +325,25 @@ def _mean_volume_db(path: str, filter_str: str | None = None) -> float | None:
     return float(m.group(1)) if m else None
 
 
-def _postprocess_voice_ref(raw_path: str, output_path: str, eq_gain_db: float) -> dict:
-    """Normalize the voice-design output to a clean 24 kHz mono WAV and lift the
-    suppressed high-frequency band so s/f/l fricatives stay audible.
+def _postprocess_voice_ref(raw_path: str, output_path: str, eq_gain_db: float,
+                           loudness_target: float = -14.0) -> dict:
+    """Normalize the voice-design output to a clean 24 kHz mono WAV, lift the
+    suppressed high-frequency band so s/f/l fricatives stay audible, and
+    normalize loudness.
 
     The qwen3 voice-design output is heavily band-limited: energy above 2 kHz
     sits 19-28 dB below the low band (sounds "like a voice behind a thick
     cloth"), so the clone model cannot extract fricative features and the
     synthesis has to fabricate high-frequency content. A high-shelf boost
-    restores that band. Returns diagnostics for the caller's report.
+    restores that band. The raw output is ALSO quiet (no gain in the
+    workflow), so loudnorm raises it to the same LUFS target the narration
+    audio uses — without it the reference voice stayed inaudibly low. Returns
+    diagnostics for the caller's report.
     """
     filters = []
     if eq_gain_db > 0:
         filters.append(f"highshelf=f=2000:g={eq_gain_db:.1f}")
+    filters.append(f"loudnorm=I={loudness_target:.1f}:TP=-1.5:LRA=11")
     filters.append("alimiter=limit=0.95")
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw_path),
            "-ar", "24000", "-ac", "1", "-sample_fmt", "s16",
@@ -368,7 +374,8 @@ def _postprocess_voice_ref(raw_path: str, output_path: str, eq_gain_db: float) -
 
 def _run_voice_design(voice_instruct: str, output_path: str, timeout: int = 3600,
                       language: str | None = None, eq_gain_db: float = 12.0,
-                      content_override: str = "", speed: float = 1.0) -> str:
+                      content_override: str = "", speed: float = 1.0,
+                      loudness_target: float = -14.0) -> str:
     """Generate a reference voice via the qwen3_tts_voice_design workflow.
 
     The raw download is post-processed (_postprocess_voice_ref) into a clean
@@ -426,7 +433,8 @@ def _run_voice_design(voice_instruct: str, output_path: str, timeout: int = 3600
     download_file(file_url, raw_path)
 
     try:
-        diag = _postprocess_voice_ref(raw_path, output_path, eq_gain_db)
+        diag = _postprocess_voice_ref(raw_path, output_path, eq_gain_db,
+                                      loudness_target)
     finally:
         Path(raw_path).unlink(missing_ok=True)
 
@@ -532,7 +540,7 @@ def main() -> None:
         voice_file = _run_voice_design(
             voice_instruct, voice_output, timeout=tts_timeout, language=lang,
             eq_gain_db=voice_ref_eq_db, content_override=voice_ref_content,
-            speed=speed,
+            speed=speed, loudness_target=loudness_target,
         )
 
         # Update project_config.yaml with the generated voice file
