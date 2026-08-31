@@ -40,9 +40,9 @@ tts:
   # Both `tts synth` and `tts run` auto-read this field — no --backend flag
   # needed in commands. Set once, all TTS calls route automatically.
   backend: comfyui_indextts
-  # speed: 音色设计参考音频的语速倍率。1.0 = 每秒 5 个汉字（中文）或约 2.5 个
-  #   单词（英文）；音色设计生成后用 ffmpeg atempo 做变速后处理，落在
-  #   speed×基准速率上（旁白合成不调整语速）。
+  # speed: 旁白语速倍率。每段合成旁白都用 ffmpeg atempo 变速，保证全片语速
+  #   一致：speed×基准速率，1.0 = 每秒 5 个汉字（中文）或约 2.5 个单词（英文）。
+  #   音色设计参考音频不调整语速。
   speed: 1.0
   volume: 1.0 # narration volume 0–1 (Remotion <Audio> volume multiplier)
   pause_seconds: 0.5 # 每段旁白音频后的留白秒数（计入 narration.total_frame，读完停顿再读下一段）
@@ -54,8 +54,9 @@ tts:
     #   using voice_instruct, generates projects/{name}/voice_file.wav, and
     #   updates this field.
     # voice_instruct: REQUIRED — agent fills (example shown). Describes the
-    #   target voice characteristics. 建议带"语速快"：参考音色会被强制变速到
-    #   语速标准（5 字/秒 @ speed=1.0），原生语速越快，变速失真越小。
+    #   target voice characteristics. 建议带"语速快"：每段合成旁白会被变速到
+    #   统一语速标准（5 字/秒 @ speed=1.0），参考音色原生语速越快，变速量越
+    #   小、失真越小。
     #   zh-CN example: "男，中年，中音调，语速快"  en-US example: "male, middle-aged, moderate pitch, fast pace"
     #   See comfyui-scheduler/doc/workflow.md for valid attributes.
   voice_file: ""

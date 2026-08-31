@@ -45,9 +45,10 @@ tts:
   # backend: comfyui_indextts — ComfyUI index_tts_2 workflow (default).
   #          http_server      — HTTP multipart TTS server (see tts.http below).
   backend: comfyui_indextts
-  # speed: speech-rate multiplier for the VOICE DESIGN reference audio. 1.0 = 5
-  #   CJK chars/s (zh) or ~2.5 words/s (en, ≈150 wpm); the generated reference
-  #   voice is time-stretched to match. Narration synthesis is NOT adjusted.
+  # speed: narration speech-rate multiplier. Each synthesized narration is
+  #   time-stretched so ALL narrations share the same pace: speed × base rate,
+  #   1.0 = 5 CJK chars/s (zh) or ~2.5 words/s (en, ≈150 wpm). The voice-design
+  #   reference audio is NOT adjusted.
   speed: 1.0
   # volume: narration audio volume 0–1 (multiplier applied by Remotion <Audio>).
   #   Remotion caps volume at 1.0 — to make the narration louder, use `loudnorm`
@@ -69,9 +70,9 @@ tts:
   # voice_instruct: REQUIRED — empty at init. The agent MUST fill it in before
   #   Step 7 (run_tts.py). When voice_file is empty, the voice design workflow
   #   (qwen3_tts_voice_design) runs automatically using voice_instruct and errors
-  #   if it is still empty. Examples (include a fast pace — the reference voice
-  #   is force-adjusted to the speech-rate standard, and a natively fast
-  #   reference keeps that adjustment small):
+  #   if it is still empty. Examples (include a fast pace — narrations are
+  #   time-stretched to the uniform speech-rate standard, and a natively fast
+  #   reference voice keeps those adjustments small):
   #   zh-CN: "男，中年，中音调，语速快"   en-US: "male, middle-aged, moderate pitch, fast pace"
   #   See comfyui-scheduler/doc/workflow.md for the valid voice attributes.
   voice_instruct: ""
