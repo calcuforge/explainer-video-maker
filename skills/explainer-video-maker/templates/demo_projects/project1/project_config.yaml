@@ -54,11 +54,12 @@ tts:
     #   using voice_instruct, generates projects/{name}/voice_file.wav, and
     #   updates this field.
     # voice_instruct: REQUIRED — agent fills (example shown). Describes the
-    #   target voice characteristics.
-    #   zh-CN example: "男，中年，中音调"  en-US example: "male, middle-aged, moderate pitch"
+    #   target voice characteristics. 建议带"语速快"：参考音色会被强制变速到
+    #   语速标准（6 字/秒 @ speed=1.0），原生语速越快，变速失真越小。
+    #   zh-CN example: "男，中年，中音调，语速快"  en-US example: "male, middle-aged, moderate pitch, fast pace"
     #   See comfyui-scheduler/doc/workflow.md for valid attributes.
   voice_file: ""
-  voice_instruct: "男，中年，中音调"
+  voice_instruct: "男，中年，中音调，语速快"
   # voice_ref_eq_db: high-frequency clarity boost (dB) for the auto-generated
   #   reference voice — the qwen3 voice-design output is band-limited above
   #   ~2 kHz (muffled, fricatives inaudible); 8-16 works well, 0 = disable.

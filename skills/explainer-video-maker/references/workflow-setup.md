@@ -136,8 +136,12 @@ projects/
    `tts.backend` / `speed` / `volume` / `pause_seconds`, `theme.*`,
    `content.duration`, `render.*` (segmented-render tuning), `subtitle.*`.
    `tts.voice_instruct` is EMPTY at init —
-   fill it with the target voice characteristics (e.g., `男，中年，中音调`); see
-   `comfyui-scheduler/doc/workflow.md` for valid voice attributes.
+   fill it with the target voice characteristics — INCLUDE a fast pace
+   (e.g., `男，中年，中音调，语速快` / `male, middle-aged, moderate pitch, fast
+   pace`): the reference voice is force-adjusted to the speech-rate standard
+   (6 字/秒 @ speed=1.0), and a natively fast reference keeps that adjustment
+   small (less atempo distortion); see `comfyui-scheduler/doc/workflow.md` for
+   valid voice attributes.
 
    **`dependence_paths` is pre-filled by `init_project.py`** to the workspace's
    `dep/` directory as workspace-relative paths

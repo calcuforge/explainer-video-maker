@@ -69,8 +69,10 @@ tts:
   # voice_instruct: REQUIRED — empty at init. The agent MUST fill it in before
   #   Step 7 (run_tts.py). When voice_file is empty, the voice design workflow
   #   (qwen3_tts_voice_design) runs automatically using voice_instruct and errors
-  #   if it is still empty. Examples:
-  #   zh-CN: "男，中年，中音调"   en-US: "male, middle-aged, moderate pitch"
+  #   if it is still empty. Examples (include a fast pace — the reference voice
+  #   is force-adjusted to the speech-rate standard, and a natively fast
+  #   reference keeps that adjustment small):
+  #   zh-CN: "男，中年，中音调，语速快"   en-US: "male, middle-aged, moderate pitch, fast pace"
   #   See comfyui-scheduler/doc/workflow.md for the valid voice attributes.
   voice_instruct: ""
   # voice_ref_eq_db: high-frequency clarity boost (dB) applied to the

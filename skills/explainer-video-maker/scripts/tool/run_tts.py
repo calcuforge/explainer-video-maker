@@ -99,10 +99,6 @@ RATE_EN = 2.5   # English words per second at speed=1.0
 # get over-compressed: speech sped up AND pauses shrunk → 忽快忽慢).
 PAUSE_SEC_ZH = 0.30
 PAUSE_SEC_EN = 0.25
-# atempo quality degrades beyond this range — clamp to it instead of
-# producing audible distortion on outlier narrations.
-SPEED_FACTOR_MIN = 0.75
-SPEED_FACTOR_MAX = 1.33
 _CJK_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf]")
 _WORD_RE = re.compile(r"[A-Za-z]+(?:['-][A-Za-z]+)*")
 _MAJOR_PUNCT_RE = re.compile(r"[，。！？；、,.!?;]")
@@ -444,12 +440,9 @@ def _run_voice_design(voice_instruct: str, output_path: str, timeout: int = 3600
     # whole pipeline — narration synthesis itself is NOT adjusted.
     target_sec = target_duration_for_speed(content, speed, lang)
     if target_sec > 0:
+        # 强制达标：atempo 链可叠加任意倍率（每级 0.5-2.0，build_atempo_chain
+        # 自动分段），不做钳制——直接拉到 speed×基准速率（6 字/秒 @1.0）。
         factor = get_audio_duration(output_path) / target_sec
-        if not SPEED_FACTOR_MIN <= factor <= SPEED_FACTOR_MAX:
-            print(f"    NOTE: voice-design speech-rate factor {factor:.2f} "
-                  f"clamped to [{SPEED_FACTOR_MIN}, {SPEED_FACTOR_MAX}]",
-                  file=sys.stderr)
-            factor = min(max(factor, SPEED_FACTOR_MIN), SPEED_FACTOR_MAX)
         if not adjust_speech_rate(output_path, factor):
             print(f"    WARNING: voice-design speed adjust failed for {output_path}",
                   file=sys.stderr)
@@ -522,7 +515,7 @@ def main() -> None:
                 "status": "error",
                 "msg": "Cannot auto-generate voice: tts.voice_instruct is empty — fill it in "
                        "project_config.yaml (describe the target voice characteristics, e.g. "
-                       "'男，中年，中音调'; see comfyui-scheduler/doc/workflow.md)",
+                       "'男，中年，中音调，语速快'; see comfyui-scheduler/doc/workflow.md)",
                 "data": {},
             }, ensure_ascii=False, indent=2))
             sys.exit(1)
