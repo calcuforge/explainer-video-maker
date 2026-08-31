@@ -208,7 +208,7 @@ projects/
    above 2 kHz sits ~20 dB below the low band (muffled, s/f/l fricatives
    inaudible), which degrades voice cloning. `run_tts.py` post-processes its
    auto-generated reference with a 24 kHz normalize + high-shelf clarity boost
-   (`tts.voice_ref_eq_db`, default 12 dB; content defaults to a fricative-rich
+   (`tts.voice_ref_eq_db`, default 6 dB; content defaults to a fricative-rich
    balanced sentence, override with `tts.voice_ref_content`).
 
 ---

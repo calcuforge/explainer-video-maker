@@ -80,9 +80,9 @@ tts:
   #   AUTO-GENERATED reference voice (voice_file empty). The qwen3 voice-design
   #   output is band-limited (energy above 2 kHz sits ~20 dB below the low band —
   #   "muffled, s/f/l fricatives inaudible"), so the shelf lift restores the
-  #   fricative band the clone model extracts. 8-16 works well; 0 = disable.
+  #   fricative band the clone model extracts. 6 works well; 0 = disable.
   # The reference voice is also loudness-normalized to tts.loudness_target.
-  voice_ref_eq_db: 12
+  voice_ref_eq_db: 6
   # voice_ref_content: optional override for the reference audio's spoken text.
   #   Default is a fricative-rich phonetically balanced sentence (covers
   #   s/sh/f/l/j/q/x/z/c). Longer/denser content = clearer articulation features.

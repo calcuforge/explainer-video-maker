@@ -366,7 +366,7 @@ def _postprocess_voice_ref(raw_path: str, output_path: str, eq_gain_db: float,
 
 
 def _run_voice_design(voice_instruct: str, output_path: str, timeout: int = 3600,
-                      language: str | None = None, eq_gain_db: float = 12.0,
+                      language: str | None = None, eq_gain_db: float = 6.0,
                       content_override: str = "",
                       loudness_target: float = -14.0) -> str:
     """Generate a reference voice via the qwen3_tts_voice_design workflow.
@@ -477,7 +477,7 @@ def main() -> None:
     # The qwen3 voice-design output is band-limited above ~2 kHz (muffled, no
     # audible fricatives); the shelf lift restores the band the clone model
     # extracts s/f/l from. 0 = disable.
-    voice_ref_eq_db = float(tts_config.get("voice_ref_eq_db", 12.0))
+    voice_ref_eq_db = float(tts_config.get("voice_ref_eq_db", 6.0))
     # Optional override for the reference audio's spoken text (default is a
     # fricative-rich phonetically balanced sentence).
     voice_ref_content = tts_config.get("voice_ref_content", "")
