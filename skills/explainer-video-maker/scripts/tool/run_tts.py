@@ -292,17 +292,13 @@ def collect_narration_units(video_struct: dict) -> list[dict]:
     return units
 
 
-# Reference text for voice design: covers the full Mandarin tone set
-# (1-4 + neutral), common tone-pair combinations, the 3+3 tone sandhi
-# (小鸟), and the 一/不 sandhi (一边 yì-, 不怕 bú-), plus heavy
-# fricative/plosive articulation coverage (s/sh/f/l/j/q/x/z/c/b/p/d...).
-# The voice-clone model extracts both tone and articulation features from
-# the reference — a tone-poor or consonant-poor sample gives it nothing.
+# Phonetically balanced reference sentences with heavy fricative/plosive
+# coverage (s/sh/f/l/j/q/x/z/c/b/p/d...). The voice-clone model extracts
+# articulation features (esp. s/f/l fricatives) from the reference — a
+# consonant-poor sample gives it nothing to learn.
 _REFERENCE_CONTENT_ZH = (
-    "春天到了，山坡上的桃花开了，五岁的妹妹和爸爸坐在岸边的小船上，"
-    "一边吃着甜甜的糖果，一边数着三只小鸟。柳枝轻轻摆动，"
-    "山顶上风轻轻吹过来，远处青山的倒影在水面上晃动，"
-    "妹妹高兴地说，不怕，秋天我们还要再来。"
+    "春风拂面，柳枝轻摆。十四岁的少年背着新书包，沿着山路数着石阶，"
+    "一步一步爬上山顶，山下的城市景色尽收眼底。"
 )
 _REFERENCE_CONTENT_EN = (
     "Fresh spring air flows over the forest hills. She sells sixty fresh "
