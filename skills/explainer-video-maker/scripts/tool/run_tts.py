@@ -65,7 +65,10 @@ def normalize_loudness(path: str, target_lufs: float = -14.0) -> bool:
     """Normalize a narration WAV to a target loudness (single-pass loudnorm).
 
     Re-encodes in place (temp file + atomic replace) so the narration is
-    consistently audible. Returns False on failure, leaving the original intact.
+    consistently audible. Also downsamples to 24 kHz: the TTS backend outputs
+    192 kHz raw audio, and keeping the full high-frequency band would carry
+    the (previously boosted) 2-10 kHz noise signature into the 48 kHz mix.
+    Returns False on failure, leaving the original intact.
     """
     src = Path(path)
     if not src.exists() or src.stat().st_size == 0:
@@ -74,6 +77,7 @@ def normalize_loudness(path: str, target_lufs: float = -14.0) -> bool:
     try:
         subprocess.run(
             ["ffmpeg", "-y", "-i", str(src),
+             "-ar", "24000",
              "-af", f"loudnorm=I={target_lufs}:TP=-1.5:LRA=11",
              "-c:a", "pcm_s16le", tmp],
             capture_output=True, text=True, timeout=120, check=True,
@@ -155,7 +159,8 @@ def build_atempo_chain(factor: float) -> list[str]:
 
 def adjust_speech_rate(path: str, factor: float) -> bool:
     """Time-stretch a narration to the target speech rate (factor >1 = faster).
-    Re-encodes in place (temp file + atomic replace), like normalize_loudness.
+    Re-encodes in place (temp file + atomic replace), like normalize_loudness,
+    and downsamples to 24 kHz (same rationale as normalize_loudness).
     Returns False on failure, leaving the original intact."""
     if abs(factor - 1.0) < 0.02:
         return True
@@ -166,6 +171,7 @@ def adjust_speech_rate(path: str, factor: float) -> bool:
     try:
         subprocess.run(
             ["ffmpeg", "-y", "-i", str(src),
+             "-ar", "24000",
              "-af", ",".join(build_atempo_chain(factor)),
              "-c:a", "pcm_s16le", tmp],
             capture_output=True, text=True, timeout=120, check=True,

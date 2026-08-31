@@ -58,7 +58,9 @@ tts:
   #   narration) so the pacing breathes. Added to narration.total_frame during TTS.
   pause_seconds: 0.5
   # loudnorm: normalize each narration's audio to a target loudness (LUFS) so the
-  #   narration is consistently audible. Re-encodes the narration WAV after TTS.
+  #   narration is consistently audible. Re-encodes the narration WAV after TTS
+  #   (downsampling it to 24 kHz — cuts the backend's 192 kHz broadband hiss
+  #   before it reaches the 48 kHz mix).
   loudnorm: true
   # loudness_target: integrated loudness target in LUFS (negative). Higher (less
   #   negative) = louder. e.g. -16 broadcast/narration, -14 streaming (default),
