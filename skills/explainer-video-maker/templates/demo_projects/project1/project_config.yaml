@@ -64,7 +64,6 @@ tts:
   # voice_ref_eq_db: high-frequency clarity boost (dB) for the auto-generated
   #   reference voice — the qwen3 voice-design output is band-limited above
   #   ~2 kHz (muffled, fricatives inaudible); 6 works well, 0 = disable.
-  # 参考音色还会归一化响度到 tts.loudness_target。
   voice_ref_eq_db: 6
   # voice_ref_content: optional override for the reference spoken text (default
   #   is a fricative-rich balanced sentence).
