@@ -175,3 +175,8 @@ subtitle:
   alignment: 2
   marginV: 6
 rss_source_list: [] # Step 3: cached RSS feeds ({url, description})
+# 推广信息（长文本，可选）：本项目视频发布到各视频平台时附带的内容
+# （如账号关注引导、合作/联系方式、系列推荐等）。由 video-publisher skill
+# 在发布时读取：有视频简介表单的平台填入简介，无简介表单的平台由 agent
+# 按平台类型决定填写位置（如评论区）。空字符串 = 不附加推广。
+promotion: ""

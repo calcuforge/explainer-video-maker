@@ -147,3 +147,5 @@ subtitle:
 rss_source_list:
   - url: xxx
     description: xxx
+# 推广信息示例：发布到各平台时附带的账号推广文案
+promotion: "本频道每周更新AI前沿解读，欢迎点赞关注！合作请联系 ai@example.com"
