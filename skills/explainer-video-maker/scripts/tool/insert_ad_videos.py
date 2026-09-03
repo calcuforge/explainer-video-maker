@@ -21,10 +21,13 @@ Implementation (ffmpeg):
      next chapter)
   2. split the finished video at T into tmp/part1.mp4 + tmp/part2.mp4 (re-encode,
      frame-accurate)
-  3. normalize each ad to the main video's resolution/fps/codec (silent audio
-     track added if the ad has none)
-  4. merge part1 + ads + part2 with the concat demuxer (stream copy) into
-     {video_dir}/final.mp4 (faststart)
+  3. align each ad to the main video's spec so the merge can stream-copy:
+     already-identical ads are remuxed with -c copy (no re-encode); ads whose
+     video matches but audio is missing/mismatched get their video stream
+     copied and only the audio (re)encoded; everything else is fully
+     re-encoded (silent track added when the ad has none)
+  4. merge part1 + ads + part2 with the concat demuxer (stream copy, no
+     re-encode) into {video_dir}/final.mp4 (faststart)
 
 Usage:
     python insert_ad_videos.py --project-config /abs/project_config.yaml \
@@ -62,37 +65,44 @@ def _run(cmd: list[str]) -> subprocess.CompletedProcess:
 
 
 def probe(path: str) -> dict:
-    """Return {width, height, fps, duration} of the first video stream + format duration."""
+    """Probe video + audio codec parameters of a file.
+
+    Returns {width, height, fps, duration, codec, profile, pix_fmt, has_audio,
+    audio_codec, audio_sr, audio_ch}. Used both for the main video (the spec
+    ads are aligned to) and for deciding how much an ad must be re-encoded.
+    """
     out = _run([
         "ffprobe", "-v", "error",
-        "-select_streams", "v:0",
-        "-show_entries", "stream=width,height,avg_frame_rate:format=duration",
+        "-show_entries", ("stream=codec_type,codec_name,profile,pix_fmt,width,"
+                          "height,avg_frame_rate,sample_rate,channels:format=duration"),
         "-of", "json", path,
     ])
     if out.returncode != 0:
         raise RuntimeError(f"ffprobe failed on {path}: {out.stderr.strip()}")
     data = json.loads(out.stdout)
-    stream = (data.get("streams") or [{}])[0]
+    video = next((s for s in data.get("streams") or [] if s.get("codec_type") == "video"), {})
+    audio = next((s for s in data.get("streams") or [] if s.get("codec_type") == "audio"), {})
+
     fps = 24.0
-    if stream.get("avg_frame_rate"):
-        num, _, den = stream["avg_frame_rate"].partition("/")
+    if video.get("avg_frame_rate"):
+        num, _, den = video["avg_frame_rate"].partition("/")
         try:
             fps = float(num) / float(den) if float(den) else 24.0
         except ValueError:
             fps = 24.0
     return {
-        "width": stream.get("width"),
-        "height": stream.get("height"),
+        "width": video.get("width"),
+        "height": video.get("height"),
         "fps": fps,
+        "codec": video.get("codec_name"),
+        "profile": video.get("profile"),
+        "pix_fmt": video.get("pix_fmt"),
         "duration": float(data.get("format", {}).get("duration") or 0.0),
+        "has_audio": bool(audio),
+        "audio_codec": audio.get("codec_name"),
+        "audio_sr": audio.get("sample_rate"),
+        "audio_ch": audio.get("channels"),
     }
-
-
-def has_audio(path: str) -> bool:
-    out = _run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=index", "-of", "json", path])
-    if out.returncode != 0:
-        raise RuntimeError(f"ffprobe failed on {path}: {out.stderr.strip()}")
-    return bool(json.loads(out.stdout).get("streams"))
 
 
 def find_ad_videos(project_root: Path, extra_dirs: list[str]) -> list[Path]:
@@ -200,27 +210,82 @@ def encode_segment(src: str, dst: str, w: int, h: int, fps: float, crf: int, sta
         raise RuntimeError(f"ffmpeg failed: {' '.join(cmd)}\n{proc.stderr[-2000:]}")
 
 
-def normalize_ad(src: str, dst: str, w: int, h: int, fps: float, crf: int) -> None:
-    """Normalize an ad to the main video spec; add a silent track if it has no audio."""
-    if has_audio(src):
-        encode_segment(src, dst, w, h, fps, crf, None, None)
-    else:
-        cmd = [
-            "ffmpeg", "-y",
-            "-i", src,
-            "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
-            "-shortest",
-            "-vf", f"scale={w}:{h},setsar=1",
-            "-r", f"{fps:.3f}",
-            "-c:v", "libx264", "-preset", "medium", "-crf", str(crf), "-pix_fmt", "yuv420p",
-            "-map", "0:v:0", "-map", "1:a:0",
-            "-c:a", "aac", "-ar", "48000", "-ac", "2",
-            "-movflags", "+faststart",
-            dst,
-        ]
+def align_ad(src: str, dst: str, main: dict, crf: int) -> str:
+    """Prepare an ad for a STREAM-COPY concat next to the main video, re-encoding
+    as little as possible. The concat demuxer reuses the first file's codec
+    parameters, so every segment must match the main video's spec exactly
+    (codec/profile/pix_fmt/resolution/fps + audio codec/rate/channels).
+
+      - already spec-identical -> container remux only (-c copy, no re-encode)
+      - video identical, audio missing/mismatched -> video stream copy + audio
+        (re)encoded/added to match
+      - otherwise -> full re-encode to the main spec
+
+    Returns the mode used ('copy' | 'audio-only' | 'full').
+    """
+    info = probe(src)
+    fps_ok = main.get("fps") and abs(info["fps"] - main["fps"]) / main["fps"] < 0.02
+    video_ok = (
+        info["codec"] == main.get("codec")
+        and info["profile"] == main.get("profile")
+        and info["pix_fmt"] == main.get("pix_fmt")
+        and info["width"] == main.get("width")
+        and info["height"] == main.get("height")
+        and fps_ok
+    )
+    audio_ok = (
+        info["audio_codec"] == main.get("audio_codec")
+        and info["audio_sr"] == main.get("audio_sr")
+        and info["audio_ch"] == main.get("audio_ch")
+    )
+
+    if video_ok and audio_ok:
+        cmd = ["ffmpeg", "-y", "-i", src, "-c", "copy", "-movflags", "+faststart", dst]
         proc = _run(cmd)
         if proc.returncode != 0:
             raise RuntimeError(f"ffmpeg failed: {' '.join(cmd)}\n{proc.stderr[-2000:]}")
+        mode = "copy"
+    elif video_ok:
+        cmd = ["ffmpeg", "-y", "-i", src]
+        if info["has_audio"]:
+            # Video is already spec-identical — convert only the audio track.
+            cmd += ["-c:v", "copy", "-c:a", "aac", "-ar", "48000", "-ac", "2"]
+        else:
+            # No audio track — add a silent one; video stays a stream copy.
+            cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-shortest",
+                    "-map", "0:v:0", "-map", "1:a:0",
+                    "-c:v", "copy", "-c:a", "aac", "-ar", "48000", "-ac", "2"]
+        cmd += ["-movflags", "+faststart", dst]
+        proc = _run(cmd)
+        if proc.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed: {' '.join(cmd)}\n{proc.stderr[-2000:]}")
+        mode = "audio-only"
+    else:
+        # Full re-encode to the main spec.
+        if info["has_audio"]:
+            encode_segment(src, dst, main["width"], main["height"], main["fps"], crf,
+                           None, None)
+        else:
+            # Audio-less ad: re-encode AND add a silent track — without it the
+            # concat stream copy would leave a gap in the audio stream.
+            cmd = [
+                "ffmpeg", "-y",
+                "-i", src,
+                "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
+                "-shortest",
+                "-vf", f"scale={main['width']}:{main['height']},setsar=1",
+                "-r", f"{main['fps']:.3f}",
+                "-c:v", "libx264", "-preset", "medium", "-crf", str(crf), "-pix_fmt", "yuv420p",
+                "-map", "0:v:0", "-map", "1:a:0",
+                "-c:a", "aac", "-ar", "48000", "-ac", "2",
+                "-movflags", "+faststart",
+                dst,
+            ]
+            proc = _run(cmd)
+            if proc.returncode != 0:
+                raise RuntimeError(f"ffmpeg failed: {' '.join(cmd)}\n{proc.stderr[-2000:]}")
+        mode = "full"
+    return mode
 
 
 def main() -> None:
@@ -299,12 +364,13 @@ def main() -> None:
             encode_segment(str(video), str(part2), w, h, fps, crf, start=cut_sec, duration=None)
             made.append(part2)
 
-        # 2) normalize ads to the main video spec, in filename order;
-        #    ads sit between part1 and part2
+        # 2) align ads to the main video spec so the concat below can
+        #    stream-copy every segment; ads sit between part1 and part2
         ad_segments: list[Path] = []
         for i, ad_video_file in enumerate(ad_videos, 1):
             norm = tmp / f"ad_norm{i}.mp4"
-            normalize_ad(str(ad_video_file), str(norm), w, h, fps, crf)
+            mode = align_ad(str(ad_video_file), str(norm), main_info, crf)
+            print(f"[ad_align] {ad_video_file.name}: {mode}", file=sys.stderr)
             ad_segments.append(norm)
             made.append(norm)
 
