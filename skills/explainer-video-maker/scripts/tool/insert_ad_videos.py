@@ -15,7 +15,10 @@ All videos found under the ad dirs are inserted at the insertion point in
 filename order: part1 + ad1 + ad2 + ... + part2.
 
 Implementation (ffmpeg):
-  1. compute the insertion time T from remotion_sections.yaml scene frame sums
+  1. compute the insertion time T from remotion_sections.yaml by mirroring the
+     template's rendered timeline (scenes stretched by audioScale and overlapped
+     by the transition duration — naive frame sums drift into the middle of the
+     next chapter)
   2. split the finished video at T into tmp/part1.mp4 + tmp/part2.mp4 (re-encode,
      frame-accurate)
   3. normalize each ad to the main video's resolution/fps/codec (silent audio
@@ -38,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import shutil
 import subprocess
 import sys
@@ -110,23 +114,48 @@ def find_ad_videos(project_root: Path, extra_dirs: list[str]) -> list[Path]:
 
 
 def compute_cut_time(remotion_sections: dict, position: str, insert_after_story: str | None) -> tuple[float, str]:
-    """Return (cut time in seconds, human-readable point description)."""
+    """Return (cut time in seconds, human-readable point description).
+
+    Mirrors the template's RENDERED timeline (YamlVideo.js / Root.js): each
+    scene plays for max(15, round(total_frame × audioScale)) frames and
+    adjacent scenes OVERLAP by the transition duration (TransitionSeries), so
+    flat scene k starts Σdur[0..k-1] − k×transition — progressively earlier
+    than the naive cumulative frame sum. Naive sums drift across every scene,
+    landing the ad cut inside the following chapter; the formula below
+    reproduces the true boundary: after story X, cut when the crossfade into
+    the next story completes (previous story fully faded out, next narration
+    not yet its own content).
+    """
     fps = float(remotion_sections.get("fps", 24.0))
     stories = remotion_sections.get("stories", [])
+    theme = remotion_sections.get("theme") or {}
+    transition_frames = 0.0
+    if str(theme.get("transition_type", "fade")) != "none":
+        transition_frames = float(theme.get("transition_duration", 12.0) or 0.0)
 
-    story_frames: list[tuple[str, int]] = []
+    flat: list[tuple[str, int]] = []  # (story_id, total_frame), in render order
     for story in stories:
-        frames = 0
+        sid = story.get("story_id", "")
         for section in story.get("section_list", []):
             for scene in section.get("scene_list", []):
-                frames += int(scene.get("total_frame", 0))
-        story_frames.append((story.get("story_id", ""), frames))
-    total_frames = sum(f for _, f in story_frames)
+                flat.append((sid, int(scene.get("total_frame", 0) or 0)))
+    count = len(flat)
+    total_frames = sum(f for _, f in flat)
+    transition_count = max(0, count - 1)
+    audio_scale = 1.0
+    if total_frames > 0:
+        audio_scale = (total_frames + transition_count * transition_frames) / total_frames
+    # Math.round semantics (JS), not Python's banker's rounding.
+    dur = [max(15, math.floor(f * audio_scale + 0.5)) for _, f in flat]
+    prefix = [0.0]
+    for d in dur:
+        prefix.append(prefix[-1] + d)
 
     if position == "beginning":
         return 0.0, "beginning (before story 1)"
     if position == "end":
-        return total_frames / fps, "end (after all chapters)"
+        return (prefix[-1] - transition_count * transition_frames) / fps, \
+               "end (after all chapters)"
 
     # middle — the agent decides the exact chapter boundary
     if not insert_after_story:
@@ -134,17 +163,20 @@ def compute_cut_time(remotion_sections: dict, position: str, insert_after_story:
             "insert_position=middle requires the agent to pick the chapter boundary: "
             "set ad_video.insert_after_story in project_config.yaml (e.g. story3) "
             "or pass --insert-after-story. Valid story ids: "
-            + ", ".join(sid for sid, _ in story_frames if sid)
+            + ", ".join(sorted({sid for sid, _ in flat if sid}))
         )
-    cut_frames = 0
-    for sid, frames in story_frames:
-        cut_frames += frames
-        if sid == insert_after_story:
-            return cut_frames / fps, f"after story '{insert_after_story}'"
-    raise RuntimeError(
-        f"insert_after_story '{insert_after_story}' not found in remotion_sections.yaml. "
-        f"Valid story ids: {', '.join(sid for sid, _ in story_frames if sid)}"
-    )
+    last_scene = max((i for i, (sid, _) in enumerate(flat) if sid == insert_after_story),
+                     default=-1)
+    if last_scene < 0:
+        raise RuntimeError(
+            f"insert_after_story '{insert_after_story}' not found in remotion_sections.yaml. "
+            f"Valid story ids: {', '.join(sorted({sid for sid, _ in flat if sid}))}"
+        )
+    # m = flat index of the next story's first scene; its crossfade completes at
+    # prefix[m] − (m−1)×transition (the previous story is fully faded out).
+    m = last_scene + 1
+    cut_frames = max(0.0, prefix[m] - (m - 1) * transition_frames)
+    return cut_frames / fps, f"after story '{insert_after_story}'"
 
 
 def encode_segment(src: str, dst: str, w: int, h: int, fps: float, crf: int, start: float | None, duration: float | None) -> None:
