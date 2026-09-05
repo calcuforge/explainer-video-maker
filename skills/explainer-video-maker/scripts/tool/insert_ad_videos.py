@@ -27,7 +27,9 @@ Implementation (ffmpeg):
      copied and only the audio (re)encoded; everything else is fully
      re-encoded (silent track added when the ad has none)
   4. merge part1 + ads + part2 with the concat demuxer (stream copy, no
-     re-encode) into {video_dir}/final.mp4 (faststart)
+     re-encode) — the original video is preserved as origin_<name>
+     (origin_result.mp4) and the ad-inserted result is written back under the
+     original name (result.mp4), faststart
 
 Usage:
     python insert_ad_videos.py --project-config /abs/project_config.yaml \
@@ -381,30 +383,47 @@ def main() -> None:
         if cut_sec < duration - 0.01:
             order.append(tmp / "ad_part2.mp4")
 
-        # 3) merge part1 + ads + part2 (concat demuxer, stream copy)
-        concat_list = tmp / "ad_concat_list.txt"
-        with open(concat_list, "w", encoding="utf-8") as f:
-            for p in order:
-                f.write(f"file '{str(p).replace(chr(39), chr(39) * 2)}'\n")
-
-        final = video_dir / "final.mp4"
-        proc = _run([
-            "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list),
-            "-c", "copy", "-movflags", "+faststart", str(final),
-        ])
-        if proc.returncode != 0:
-            raise RuntimeError(f"ffmpeg concat failed:\n{proc.stderr[-2000:]}")
+        # 3) merge part1 + ads + part2 (concat demuxer, stream copy).
+        #    Preserve the original render as origin_<name> (e.g.
+        #    origin_result.mp4) and write the ad-inserted video back under the
+        #    original name (result.mp4).
+        origin_path = video.with_name("origin_" + video.name)
+        try:
+            if origin_path.exists():
+                origin_path.unlink()
+            video.rename(origin_path)
+        except OSError as e:
+            raise RuntimeError(f"cannot preserve the original video as {origin_path}: {e}")
+        try:
+            concat_list = tmp / "ad_concat_list.txt"
+            with open(concat_list, "w", encoding="utf-8") as f:
+                for p in order:
+                    f.write(f"file '{str(p).replace(chr(39), chr(39) * 2)}'\n")
+            proc = _run([
+                "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list),
+                "-c", "copy", "-movflags", "+faststart", str(video),
+            ])
+            if proc.returncode != 0:
+                raise RuntimeError(f"ffmpeg concat failed:\n{proc.stderr[-2000:]}")
+        except Exception:
+            # Merge failed — restore the original name so re-runs find the video.
+            try:
+                origin_path.rename(video)
+            except OSError:
+                pass
+            raise
 
         total_sec = sum(probe(str(p))["duration"] for p in order)
         print(json.dumps({
             "status": "ok",
-            "msg": f"inserted {len(ad_videos)} ad video(s) {point_desc} into {final.name}",
+            "msg": f"inserted {len(ad_videos)} ad video(s) {point_desc} into {video.name}",
             "data": {
                 "inserted": True,
                 "insert_position": position,
                 "insert_point": point_desc,
                 "ad_videos": [str(p) for p in ad_videos],
-                "final_video": str(final),
+                "final_video": str(video),
+                "original_video": str(origin_path),
                 "final_duration": round(total_sec, 2),
             },
         }, ensure_ascii=False, indent=2))

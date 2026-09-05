@@ -61,7 +61,7 @@ projects/
 │   │   ├── tmp/                   # General temporary files (cache, discovery results, etc.)
 │   │   ├── remotion_sections.yaml # Step 12 — render config
 │   │   └── result.mp4             # Step 13 — rendered video
-│   │   └── final.mp4              # Step 14 — with ad videos inserted (when ads enabled + found)
+│   │   └── origin_result.mp4      # Step 14 — pre-insertion render (when ads were inserted)
 ```
 
 ---

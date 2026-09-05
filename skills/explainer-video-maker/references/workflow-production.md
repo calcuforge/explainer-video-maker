@@ -504,15 +504,17 @@ ad_video:
      --video /abs/path/result.mp4
    ```
    - The script splits `result.mp4` at the chapter boundary (ffmpeg, frame-accurate),
-     normalizes each ad to the main video's resolution/fps, and merges
-     part1 + ads + part2 (concat demuxer) into `{video_dir}/final.mp4` (faststart).
+     aligns each ad to the main video's spec (stream copy when already
+     identical), and merges part1 + ads + part2 (concat demuxer, stream copy).
+     The original render is preserved as `origin_result.mp4` and the
+     ad-inserted video is written back as `result.mp4` (faststart).
      Temp files live in `{video_dir}/tmp/` and are removed automatically
      (`--keep-parts` keeps them for debugging).
    - Exit 0 with `inserted: false` = skipped (disabled / no ads). Exit 1 = error
      (e.g. missing `insert_after_story`) — fix and re-run. Do NOT proceed until
      exit 0.
-4. **Deliver the right file:** present `final.mp4` when ads were inserted,
-   otherwise `result.mp4`. Same faststart + progressive playback rules as Step 13.
+4. **Deliver the file:** always present `result.mp4` (rewritten with ads when
+   inserted). Same faststart + progressive playback rules as Step 13.
 
 ---
 
@@ -552,7 +554,7 @@ Per-step artifact summary:
 | 11 | `bgm.mp3` (project root; path written to `bgm.audio`) |
 | 12 | `remotion_sections.yaml` (section count) |
 | 13 | `result.mp4` (file size, duration) |
-| 14 | `final.mp4` (inserted ad count, insertion point) — or report "skipped" when ads disabled/none found |
+| 14 | `result.mp4` rewritten (inserted ad count, insertion point; original kept as `origin_result.mp4`) — or report "skipped" when ads disabled/none found |
 
 ---
 
@@ -578,5 +580,5 @@ where to resume:
 | + `scenes/` with all assets | Step 11 (generate bgm) |
 | + `bgm.mp3` at project root (or `bgm.enabled: false`) | Step 12 (generate remotion) |
 | + `remotion_sections.yaml` | Step 13 (render) |
-| + `result.mp4` | Step 14 (insert ads — when `ad_video.enabled` and ads exist; else done) |
-| + `final.mp4` (or Step 14 skipped) | Done |
+| + `result.mp4` | Step 14 (insert ads — when `ad_video.enabled` and ads exist; original preserved as `origin_result.mp4`; else done) |
+| + `result.mp4` (ad-inserted or unchanged) | Done |
